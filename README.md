@@ -1,2 +1,3 @@
-# 908
-908 Ai Trading Tools
+# 908 AI Investment Platform
+
+Built by 908 Agent for TAKI.
