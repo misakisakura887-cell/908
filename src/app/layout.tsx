@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "908 | AI Investment Platform",
-  description: "Next-gen AI quantitative trading on Hyperliquid",
+  title: "Mirror-AI | 人人可用的 AI 投资平台",
+  description: "1 美金起投 · 免税交易 · AI 驱动 · 基于 Hyperliquid",
 };
 
 export default function RootLayout({
@@ -15,9 +16,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-slate-950 text-slate-50 antialiased`}>
-        {children}
+    <html lang="zh-CN" className="dark">
+      <body className={`${inter.className} bg-bg-primary text-white antialiased`}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
