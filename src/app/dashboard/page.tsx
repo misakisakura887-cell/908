@@ -1,309 +1,169 @@
-'use client';
+"use client";
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { TrendingUp, TrendingDown, DollarSign, Clock, Activity, Target, Award, AlertTriangle } from 'lucide-react';
-
-// Mock data
-const portfolioData = {
-  totalValue: 5234.56,
-  totalInvested: 4500.0,
-  totalPnl: 734.56,
-  totalPnlPercent: 16.33,
-  todayPnl: 45.23,
-  todayPnlPercent: 0.87,
-};
-
-const positions = [
-  {
-    id: '1',
-    strategyName: '黄金量化策略',
-    strategyId: '1',
-    invested: 2000,
-    currentValue: 2246,
-    pnl: 246,
-    pnlPercent: 12.3,
-    status: 'active',
-  },
-  {
-    id: '2',
-    strategyName: 'BTC 量化策略',
-    strategyId: '2',
-    invested: 1500,
-    currentValue: 1628,
-    pnl: 128,
-    pnlPercent: 8.53,
-    status: 'active',
-  },
-  {
-    id: '3',
-    strategyName: '龙头主观策略',
-    strategyId: '3',
-    invested: 1000,
-    currentValue: 1360,
-    pnl: 360,
-    pnlPercent: 36.0,
-    status: 'active',
-  },
-];
-
-const recentTrades = [
-  { time: '02-14 10:32', strategy: '黄金量化', action: '买入', symbol: 'XAU', amount: 500 },
-  { time: '02-13 15:47', strategy: 'BTC量化', action: '卖出', symbol: 'BTC', amount: 300, pnl: 24 },
-  { time: '02-12 09:15', strategy: '龙头主观', action: '买入', symbol: 'NVDA', amount: 200, pnl: 36 },
-];
+import { Navbar } from '@/components/layout/navbar';
+import { TrendingUp, Activity, DollarSign, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-bg-primary">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-primary/80 backdrop-blur-lg border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-accent-blue to-accent-purple rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">M</span>
-            </div>
-            <span className="text-xl font-bold text-white">Mirror-AI</span>
-          </Link>
-          
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/strategies" className="text-gray-300 hover:text-white transition-colors">
-              策略广场
-            </Link>
-            <Link href="/dashboard" className="text-white font-medium">
-              我的投资
-            </Link>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-400">
-              <span className="text-white font-mono">0x742d...4a8f</span>
-            </div>
-            <Button variant="secondary" size="sm">断开连接</Button>
-          </div>
-        </div>
-      </nav>
-
-      <div className="pt-24 px-6 pb-12">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">我的投资</h1>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm text-gray-400">实时更新</span>
-            </div>
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-[#020617] text-slate-200 pt-24 pb-12 px-10">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex items-center justify-between">
+            <h1 className="text-5xl font-black tracking-tighter">个人中心</h1>
+            <Button variant="secondary">刷新数据</Button>
           </div>
 
           {/* Core Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <MetricCard
-              icon={<DollarSign size={20} />}
-              label="总资产"
-              value={`$${portfolioData.totalValue.toFixed(2)}`}
-              change={`+${portfolioData.totalPnlPercent.toFixed(2)}%`}
-              positive
-            />
-            <MetricCard
-              icon={<TrendingDown size={20} />}
-              label="总投入"
-              value={`$${portfolioData.totalInvested.toFixed(2)}`}
-            />
-            <MetricCard
-              icon={<TrendingUp size={20} />}
-              label="累计收益"
-              value={`$${portfolioData.totalPnl.toFixed(2)}`}
-              change={`+${portfolioData.totalPnlPercent.toFixed(2)}%`}
-              positive
-            />
-            <MetricCard
-              icon={<Clock size={20} />}
-              label="今日收益"
-              value={`$${portfolioData.todayPnl.toFixed(2)}`}
-              change={`+${portfolioData.todayPnlPercent.toFixed(2)}%`}
-              positive
-              highlight
-            />
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Asset Distribution */}
-            <Card>
-              <h2 className="text-xl font-bold mb-4">资产分布</h2>
-              <div className="h-64 bg-black/20 rounded-lg flex items-center justify-center text-gray-500">
-                资产分布饼图（Recharts）
+          <div className="grid md:grid-cols-4 gap-6">
+            <Card className="relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl"></div>
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet size={20} className="text-cyan-400" />
+                  <div className="text-sm text-slate-400">总资产</div>
+                </div>
+                <div className="text-3xl font-black">$24,582</div>
+                <div className="flex items-center gap-1 text-sm text-cyan-400 mt-1">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                  实时
+                </div>
               </div>
             </Card>
 
-            {/* Returns Chart */}
             <Card>
-              <h2 className="text-xl font-bold mb-4">累计收益曲线</h2>
-              <div className="h-64 bg-black/20 rounded-lg flex items-center justify-center text-gray-500">
-                累计收益曲线（Recharts）
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign size={20} className="text-slate-400" />
+                <div className="text-sm text-slate-400">总投入</div>
+              </div>
+              <div className="text-3xl font-black">$20,000</div>
+            </Card>
+
+            <Card>
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp size={20} className="text-green-400" />
+                <div className="text-sm text-slate-400">累计收益</div>
+              </div>
+              <div className="text-3xl font-black text-green-400">+$4,582</div>
+              <div className="text-sm text-green-400 mt-1">+22.9%</div>
+            </Card>
+
+            <Card>
+              <div className="flex items-center gap-2 mb-2">
+                <Activity size={20} className="text-blue-400" />
+                <div className="text-sm text-slate-400">今日收益</div>
+              </div>
+              <div className="text-3xl font-black text-blue-400">+$124</div>
+              <div className="text-sm text-blue-400 mt-1">+0.5%</div>
+            </Card>
+          </div>
+
+          {/* Charts */}
+          <div className="grid lg:grid-cols-2 gap-8">
+            <Card className="h-64 flex flex-col">
+              <h3 className="text-lg font-black mb-4">资产分布</h3>
+              <div className="flex-1 flex items-center justify-center text-slate-500">
+                饼图占位
+              </div>
+            </Card>
+            <Card className="h-64 flex flex-col">
+              <h3 className="text-lg font-black mb-4">累计收益曲线</h3>
+              <div className="flex-1 flex items-center justify-center text-slate-500">
+                折线图占位
               </div>
             </Card>
           </div>
 
-          {/* Quantitative Metrics */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">量化分析指标</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <QuantCard icon={<Activity />} label="交易次数" value="47 次" />
-              <QuantCard icon={<DollarSign />} label="交易额" value="$12,345" />
-              <QuantCard icon={<Clock />} label="平均持仓" value="3.2 天" />
-              <QuantCard icon={<Target />} label="胜率" value="68.3%" positive />
-              <QuantCard icon={<TrendingUp />} label="最大单笔收益" value="+$234" subvalue="(+12%)" positive />
-              <QuantCard icon={<TrendingDown />} label="最大单笔亏损" value="-$87" subvalue="(-4%)" negative />
-              <QuantCard icon={<Award />} label="夏普比率" value="1.82" />
-              <QuantCard icon={<AlertTriangle />} label="最大回撤" value="-8.3%" negative />
-            </div>
-          </div>
-
-          {/* Positions */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">我的策略</h2>
-            <div className="space-y-4">
-              {positions.map((position) => (
-                <PositionCard key={position.id} position={position} />
+          {/* Performance Metrics */}
+          <Card>
+            <h2 className="text-2xl font-black mb-6">量化分析</h2>
+            <div className="grid md:grid-cols-4 gap-6">
+              {[
+                { label: '交易次数', value: '127', unit: '笔' },
+                { label: '交易额', value: '$845K', unit: '' },
+                { label: '平均持仓', value: '4.2', unit: '天' },
+                { label: '胜率', value: '68', unit: '%' },
+                { label: '最大单笔收益', value: '+$1,234', unit: '', color: 'text-green-400' },
+                { label: '最大单笔亏损', value: '-$456', unit: '', color: 'text-red-400' },
+                { label: '夏普比率', value: '1.89', unit: '' },
+                { label: '最大回撤', value: '-8.2', unit: '%', color: 'text-red-400' },
+              ].map((metric, i) => (
+                <div key={i} className="p-4 bg-slate-900/50 rounded-lg border border-slate-800">
+                  <div className="text-sm text-slate-400 mb-1">{metric.label}</div>
+                  <div className={`text-xl font-black ${metric.color || ''}`}>
+                    {metric.value}{metric.unit}
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
+          </Card>
 
-          {/* Recent Trades */}
+          {/* My Strategies */}
           <Card>
-            <h2 className="text-xl font-bold mb-4">交易记录</h2>
+            <h2 className="text-2xl font-black mb-6">我的策略</h2>
             <div className="space-y-4">
-              {recentTrades.map((trade, i) => (
-                <TradeItem key={i} trade={trade} />
+              {[
+                { name: '黄金对冲策略', invested: 5000, current: 6100, returns: 22.0, isPositive: true },
+                { name: 'BTC 动量追踪', invested: 8000, current: 9800, returns: 22.5, isPositive: true },
+                { name: '龙头股轮动', invested: 7000, current: 8682, returns: 24.0, isPositive: true },
+              ].map((s, i) => (
+                <div key={i} className="flex items-center justify-between py-4 border-b border-slate-800 last:border-0">
+                  <div className="flex-1">
+                    <div className="font-black text-lg">{s.name}</div>
+                    <div className="text-sm text-slate-400">投入: ${s.invested}</div>
+                  </div>
+                  <div className="text-right mr-8">
+                    <div className="font-black text-lg">${s.current}</div>
+                    <div className={`text-sm flex items-center justify-end gap-1 ${s.isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                      {s.isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                      {s.isPositive ? '+' : ''}{s.returns}%
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary">详情</Button>
+                    <Button size="sm">追加</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Trade History */}
+          <Card>
+            <h2 className="text-2xl font-black mb-6">交易记录</h2>
+            <div className="space-y-3">
+              {[
+                { strategy: '黄金对冲策略', action: '买入', time: '2024-02-15 14:23', pnl: 342, pct: 1.2, isPositive: true },
+                { strategy: 'BTC 动量追踪', action: '卖出', time: '2024-02-15 12:01', pnl: -125, pct: -0.4, isPositive: false },
+                { strategy: '龙头股轮动', action: '买入', time: '2024-02-15 09:45', pnl: 567, pct: 1.8, isPositive: true },
+                { strategy: '黄金对冲策略', action: '卖出', time: '2024-02-14 16:30', pnl: 234, pct: 0.9, isPositive: true },
+                { strategy: 'BTC 动量追踪', action: '买入', time: '2024-02-14 10:15', pnl: -89, pct: -0.3, isPositive: false },
+              ].map((trade, i) => (
+                <div key={i} className="flex items-center gap-4 py-3 border-b border-slate-800 last:border-0">
+                  <div className={`w-2 h-2 rounded-full ${trade.isPositive ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                  <div className="flex-1">
+                    <div className="font-bold">{trade.strategy}</div>
+                    <div className="text-xs text-slate-400">{trade.time}</div>
+                  </div>
+                  <div className="px-3 py-1 bg-slate-800 rounded text-xs font-mono">
+                    {trade.action}
+                  </div>
+                  <div className="text-right">
+                    <div className={`font-bold ${trade.isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                      {trade.isPositive ? '+' : ''}${Math.abs(trade.pnl)}
+                    </div>
+                    <div className={`text-xs ${trade.isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                      {trade.isPositive ? '+' : ''}{trade.pct}%
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </Card>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function MetricCard({ icon, label, value, change, positive, negative, highlight }: any) {
-  return (
-    <Card className={highlight ? 'border-accent-blue' : ''}>
-      <div className="flex items-center gap-2 mb-2 text-gray-400">
-        {icon}
-        <span className="text-sm">{label}</span>
-      </div>
-      <div className="flex items-end gap-3 mb-2">
-        <span className="text-3xl font-bold text-white">{value}</span>
-        {change && (
-          <span className={`text-lg mb-1 ${positive ? 'text-accent-green' : negative ? 'text-accent-red' : ''}`}>
-            {change}
-          </span>
-        )}
-      </div>
-      {highlight && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <span className="text-xs text-gray-400">实时更新</span>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function QuantCard({ icon, label, value, subvalue, positive, negative }: any) {
-  return (
-    <Card className="text-center">
-      <div className="text-gray-400 mb-2 flex justify-center">{icon}</div>
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
-      <p className={`text-xl font-bold ${positive ? 'text-accent-green' : negative ? 'text-accent-red' : 'text-white'}`}>
-        {value}
-      </p>
-      {subvalue && <p className="text-xs text-gray-500 mt-1">{subvalue}</p>}
-    </Card>
-  );
-}
-
-function PositionCard({ position }: any) {
-  return (
-    <Card>
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-        {/* Strategy Name */}
-        <div className="md:col-span-2 flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold">黄</span>
-          </div>
-          <div>
-            <h3 className="font-semibold">{position.strategyName}</h3>
-            <span className="text-xs text-gray-400">活跃中</span>
-          </div>
-        </div>
-
-        {/* Invested */}
-        <div>
-          <p className="text-xs text-gray-400 mb-1">投入金额</p>
-          <p className="font-mono font-semibold">${position.invested.toFixed(2)}</p>
-        </div>
-
-        {/* Current Value */}
-        <div>
-          <p className="text-xs text-gray-400 mb-1">当前价值</p>
-          <p className="font-mono font-semibold">${position.currentValue.toFixed(2)}</p>
-        </div>
-
-        {/* PnL */}
-        <div>
-          <p className="text-xs text-gray-400 mb-1">收益率</p>
-          <p className={`font-bold font-mono ${position.pnl > 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-            +{position.pnlPercent.toFixed(2)}%
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          <Link href={`/strategies/${position.strategyId}`}>
-            <Button size="sm" variant="secondary">详情</Button>
-          </Link>
-          <Button size="sm" variant="primary">追加</Button>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-function TradeItem({ trade }: any) {
-  return (
-    <div className="flex gap-4">
-      {/* Timeline dot */}
-      <div className="flex flex-col items-center flex-shrink-0">
-        <div className={`w-3 h-3 rounded-full ${trade.action === '买入' ? 'bg-green-400' : 'bg-red-400'}`}></div>
-        <div className="w-0.5 h-16 bg-gray-700 mt-2"></div>
-      </div>
-
-      {/* Trade Details */}
-      <div className="flex-1 pb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <span className="font-medium">{trade.strategy}</span>
-            <span className={`px-2 py-1 rounded text-xs font-semibold ${
-              trade.action === '买入' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-            }`}>
-              {trade.action}
-            </span>
-          </div>
-          <span className="text-sm text-gray-400">{trade.time}</span>
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4">
-            <span className="text-gray-400">标的: <span className="text-white">{trade.symbol}</span></span>
-            <span className="text-gray-400">金额: <span className="text-white font-mono">${trade.amount}</span></span>
-          </div>
-          {trade.pnl && (
-            <span className="text-accent-green font-semibold font-mono">+${trade.pnl}</span>
-          )}
-        </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }

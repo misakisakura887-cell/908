@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Navbar } from '@/components/layout/navbar';
 import Link from 'next/link';
 
 // Mock data
@@ -67,102 +68,82 @@ export default function StrategiesPage() {
     });
 
   return (
-    <div className="min-h-screen bg-bg-primary">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-primary/80 backdrop-blur-lg border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-accent-blue to-accent-purple rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">M</span>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-[#020617]">
+        <div className="pt-24 px-6 pb-12">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-2 text-white">策略广场</h1>
+              <p className="text-gray-400">发现最适合你的投资策略</p>
             </div>
-            <span className="text-xl font-bold text-white">Mirror-AI</span>
-          </Link>
-          
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/strategies" className="text-white font-medium">
-              策略广场
-            </Link>
-            <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors">
-              我的投资
-            </Link>
-          </div>
-          
-          <Button variant="primary">连接钱包</Button>
-        </div>
-      </nav>
 
-      <div className="pt-24 px-6 pb-12">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">策略广场</h1>
-            <p className="text-gray-400">发现最适合你的投资策略</p>
-          </div>
+            {/* Filters */}
+            <div className="mb-8 flex flex-wrap gap-4 items-center">
+              {/* Asset Type Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400 text-sm">资产类型:</span>
+                <div className="flex gap-2">
+                  <FilterButton active={filterType === 'all'} onClick={() => setFilterType('all')}>
+                    全部
+                  </FilterButton>
+                  <FilterButton active={filterType === 'crypto'} onClick={() => setFilterType('crypto')}>
+                    加密
+                  </FilterButton>
+                  <FilterButton active={filterType === 'commodity'} onClick={() => setFilterType('commodity')}>
+                    黄金
+                  </FilterButton>
+                  <FilterButton active={filterType === 'mixed'} onClick={() => setFilterType('mixed')}>
+                    混合
+                  </FilterButton>
+                </div>
+              </div>
 
-          {/* Filters */}
-          <div className="mb-8 flex flex-wrap gap-4 items-center">
-            {/* Asset Type Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 text-sm">资产类型:</span>
-              <div className="flex gap-2">
-                <FilterButton active={filterType === 'all'} onClick={() => setFilterType('all')}>
-                  全部
-                </FilterButton>
-                <FilterButton active={filterType === 'crypto'} onClick={() => setFilterType('crypto')}>
-                  加密
-                </FilterButton>
-                <FilterButton active={filterType === 'commodity'} onClick={() => setFilterType('commodity')}>
-                  黄金
-                </FilterButton>
-                <FilterButton active={filterType === 'mixed'} onClick={() => setFilterType('mixed')}>
-                  混合
-                </FilterButton>
+              {/* Risk Level Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400 text-sm">风险:</span>
+                <div className="flex gap-2">
+                  <FilterButton active={filterRisk === null} onClick={() => setFilterRisk(null)}>
+                    全部
+                  </FilterButton>
+                  <FilterButton active={filterRisk === 1} onClick={() => setFilterRisk(1)}>
+                    低
+                  </FilterButton>
+                  <FilterButton active={filterRisk === 2} onClick={() => setFilterRisk(2)}>
+                    中
+                  </FilterButton>
+                  <FilterButton active={filterRisk === 3} onClick={() => setFilterRisk(3)}>
+                    高
+                  </FilterButton>
+                </div>
+              </div>
+
+              {/* Sort */}
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-gray-400 text-sm">排序:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                >
+                  <option value="return7d">7日收益率</option>
+                  <option value="sharpe">夏普比率</option>
+                  <option value="followers">跟投人数</option>
+                </select>
               </div>
             </div>
 
-            {/* Risk Level Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 text-sm">风险:</span>
-              <div className="flex gap-2">
-                <FilterButton active={filterRisk === null} onClick={() => setFilterRisk(null)}>
-                  全部
-                </FilterButton>
-                <FilterButton active={filterRisk === 1} onClick={() => setFilterRisk(1)}>
-                  低
-                </FilterButton>
-                <FilterButton active={filterRisk === 2} onClick={() => setFilterRisk(2)}>
-                  中
-                </FilterButton>
-                <FilterButton active={filterRisk === 3} onClick={() => setFilterRisk(3)}>
-                  高
-                </FilterButton>
-              </div>
+            {/* Strategy Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredStrategies.map((strategy) => (
+                <StrategyCard key={strategy.id} strategy={strategy} />
+              ))}
             </div>
-
-            {/* Sort */}
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-gray-400 text-sm">排序:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-bg-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-accent-blue focus:outline-none"
-              >
-                <option value="return7d">7日收益率</option>
-                <option value="sharpe">夏普比率</option>
-                <option value="followers">跟投人数</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Strategy Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredStrategies.map((strategy) => (
-              <StrategyCard key={strategy.id} strategy={strategy} />
-            ))}
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -172,8 +153,8 @@ function FilterButton({ active, onClick, children }: { active: boolean; onClick:
       onClick={onClick}
       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
         active
-          ? 'bg-accent-blue text-white'
-          : 'bg-bg-tertiary text-gray-400 hover:text-white hover:bg-bg-tertiary/80'
+          ? 'bg-cyan-500 text-slate-950'
+          : 'bg-slate-900 text-gray-400 hover:text-white hover:bg-slate-800'
       }`}
     >
       {children}
@@ -185,7 +166,7 @@ function StrategyCard({ strategy }: { strategy: typeof strategies[0] }) {
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold">{strategy.name}</h3>
+        <h3 className="text-xl font-bold text-white">{strategy.name}</h3>
         <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm">
           活跃中
         </span>
@@ -202,11 +183,11 @@ function StrategyCard({ strategy }: { strategy: typeof strategies[0] }) {
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <p className="text-gray-400 text-sm mb-1">7日收益</p>
-          <p className="text-2xl font-bold text-accent-green">+{strategy.return7d}%</p>
+          <p className="text-2xl font-bold text-green-400">+{strategy.return7d}%</p>
         </div>
         <div>
           <p className="text-gray-400 text-sm mb-1">30日收益</p>
-          <p className="text-xl font-bold text-accent-green">+{strategy.return30d}%</p>
+          <p className="text-xl font-bold text-green-400">+{strategy.return30d}%</p>
         </div>
         <div>
           <p className="text-gray-400 text-sm mb-1">夏普比率</p>
@@ -214,7 +195,7 @@ function StrategyCard({ strategy }: { strategy: typeof strategies[0] }) {
         </div>
         <div>
           <p className="text-gray-400 text-sm mb-1">最大回撤</p>
-          <p className="text-xl font-bold text-accent-red">{strategy.maxDrawdown}%</p>
+          <p className="text-xl font-bold text-red-400">{strategy.maxDrawdown}%</p>
         </div>
       </div>
 
@@ -224,7 +205,7 @@ function StrategyCard({ strategy }: { strategy: typeof strategies[0] }) {
           <span className="font-semibold text-white">{strategy.followers}</span> 人跟投
         </div>
         <Link href={`/strategies/${strategy.id}`}>
-          <button className="text-accent-blue hover:text-accent-purple transition-colors font-medium">
+          <button className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium">
             查看详情 →
           </button>
         </Link>
