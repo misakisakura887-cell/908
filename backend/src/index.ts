@@ -6,6 +6,7 @@ import 'dotenv/config';
 
 import { authRoutes } from './routes/auth';
 import { strategyRoutes } from './routes/strategies';
+import { positionRoutes } from './routes/positions';
 
 const fastify = Fastify({ logger: true });
 const prisma = new PrismaClient();
@@ -21,6 +22,15 @@ fastify.register(jwt, {
   secret: process.env.JWT_SECRET || 'supersecret',
 });
 
+// JWT 认证装饰器
+fastify.decorate('authenticate', async function (request: any, reply: any) {
+  try {
+    await request.jwtVerify();
+  } catch (err) {
+    reply.code(401).send({ error: 'Unauthorized' });
+  }
+});
+
 // Health check
 fastify.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
@@ -29,6 +39,7 @@ fastify.get('/health', async () => {
 // Routes
 fastify.register(authRoutes, { prefix: '/api/auth' });
 fastify.register(strategyRoutes, { prefix: '/api/strategies' });
+fastify.register(positionRoutes, { prefix: '/api/positions' });
 
 // Start server
 const start = async () => {

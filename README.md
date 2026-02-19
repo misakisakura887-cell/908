@@ -1,36 +1,247 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 908 - AI Investment Platform
 
-## Getting Started
+> Next-gen AI quantitative trading on Hyperliquid
 
-First, run the development server:
+## 🚀 Features
+
+- **AI-Driven Strategies**: Machine learning-powered quantitative trading
+- **Multi-Asset Support**: Crypto, Gold, and Mixed portfolios
+- **Self-Custody**: No-KYC, decentralized access
+- **Real-Time Analytics**: Live performance tracking and risk metrics
+- **Web3 Integration**: Connect with MetaMask or any EVM wallet
+
+## 📦 Tech Stack
+
+### Frontend
+- **Next.js 14** (App Router + Turbopack)
+- **TypeScript**
+- **Tailwind CSS** (Dark theme)
+- **wagmi + viem** (Web3 integration)
+- **React Query** (Data fetching)
+- **Framer Motion** (Animations)
+- **Lucide React** (Icons)
+
+### Backend
+- **Fastify** (Web framework)
+- **Prisma** (ORM)
+- **PostgreSQL** (Database)
+- **Redis** (Cache)
+- **JWT** (Authentication)
+- **viem** (Signature verification)
+
+## 🛠️ Development
+
+### Prerequisites
+- Node.js 22+
+- PostgreSQL 16+
+- Redis 7+
+
+### Quick Start with Docker
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Start all services
+docker-compose up -d
+
+# Setup database
+cd backend
+npm run db:push
+npm run db:seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Manual Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+#### Frontend
+```bash
+# Install dependencies
+npm install
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Run development server
+npm run dev
+```
 
-## Learn More
+Visit: http://localhost:3000
 
-To learn more about Next.js, take a look at the following resources:
+#### Backend
+```bash
+cd backend
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Install dependencies
+npm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Setup environment variables
+cp .env.example .env
+# Edit .env with your settings
 
-## Deploy on Vercel
+# Setup database
+npm run db:push
+npm run db:seed
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Run development server
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+API: http://localhost:3001
+
+## 📂 Project Structure
+
+```
+908/
+├── src/
+│   ├── app/                 # Next.js pages
+│   │   ├── page.tsx         # Home
+│   │   ├── strategies/      # Strategy pages
+│   │   └── dashboard/       # User dashboard
+│   ├── components/
+│   │   ├── ui/              # Base components
+│   │   └── layout/          # Layout components
+│   └── lib/                 # Utilities
+│       ├── api.ts           # API client
+│       ├── wagmi.ts         # Web3 config
+│       └── utils.ts         # Helpers
+├── backend/
+│   ├── src/
+│   │   ├── routes/          # API routes
+│   │   │   ├── auth.ts      # Authentication
+│   │   │   ├── strategies.ts # Strategies
+│   │   │   └── positions.ts  # User positions
+│   │   └── index.ts         # Server entry
+│   ├── prisma/
+│   │   ├── schema.prisma    # Database schema
+│   │   └── seed.ts          # Seed data
+│   └── Dockerfile           # Docker config
+├── docker-compose.yml       # Docker Compose
+└── public/                  # Static assets
+```
+
+## 🔐 Environment Variables
+
+### Frontend (.env.local)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+### Backend (backend/.env)
+```env
+DATABASE_URL=postgresql://mirror908:password@localhost:5432/mirror908
+JWT_SECRET=your-secret-key-change-in-production
+REDIS_URL=redis://localhost:6379
+FRONTEND_URL=http://localhost:3000
+PORT=3001
+```
+
+## 📊 API Endpoints
+
+### Authentication
+- `POST /api/auth/nonce` - Get nonce for wallet
+- `POST /api/auth/verify` - Verify signature & get JWT
+
+### Strategies
+- `GET /api/strategies` - List strategies (with filters)
+- `GET /api/strategies/:id` - Get strategy details
+
+### Positions (Authenticated)
+- `GET /api/positions` - Get user positions
+- `POST /api/positions` - Invest in strategy
+- `POST /api/positions/:id/withdraw` - Withdraw funds
+
+## 🚢 Deployment
+
+### Frontend (Vercel)
+```bash
+# Build
+npm run build
+
+# Deploy
+vercel deploy --prod
+```
+
+### Backend (Docker)
+```bash
+cd backend
+docker build -t 908-backend .
+docker run -p 3001:3001 --env-file .env 908-backend
+```
+
+### Full Stack (Docker Compose)
+```bash
+docker-compose up -d
+```
+
+## 🧪 Testing
+
+### Frontend
+```bash
+npm run test
+npm run lint
+```
+
+### Backend
+```bash
+cd backend
+npm run test
+npm run lint
+```
+
+## 📝 Development Workflow
+
+1. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature
+   ```
+
+2. **Make changes and test**
+   ```bash
+   npm run dev
+   ```
+
+3. **Commit with conventional commits**
+   ```bash
+   git commit -m "feat: add new feature"
+   ```
+
+4. **Push and create PR**
+   ```bash
+   git push origin feature/your-feature
+   ```
+
+## 🏗️ Architecture
+
+```
+┌─────────────┐
+│   Browser   │
+│  (wagmi +   │
+│   viem)     │
+└──────┬──────┘
+       │
+       ├─────────────┐
+       │             │
+┌──────▼──────┐ ┌───▼────────┐
+│  Next.js    │ │  Fastify   │
+│  Frontend   │ │  Backend   │
+│  (Vercel)   │ │  (Docker)  │
+└──────┬──────┘ └───┬────────┘
+       │            │
+       │      ┌─────▼─────┐
+       │      │ PostgreSQL│
+       │      │  (Prisma) │
+       │      └───────────┘
+       │
+       │      ┌───────────┐
+       └──────►  Wallet   │
+              │ (MetaMask)│
+              └───────────┘
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## 📝 License
+
+MIT © TAKI Organization
+
+---
+
+**Built by Mirror AI** 💩
+
+*人人可用的 AI 投资平台*
