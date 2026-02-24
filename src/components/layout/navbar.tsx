@@ -1,71 +1,152 @@
 "use client";
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Wallet } from 'lucide-react';
+import { Wallet, Menu, X, LayoutDashboard, TrendingUp, BookOpen } from 'lucide-react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
+import { useStore } from '@/lib/store';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+
+const navLinks = [
+  { href: '/strategies', label: '策略广场', icon: TrendingUp },
+  { href: '/dashboard', label: '我的投资', icon: LayoutDashboard },
+  { href: '#docs', label: '文档', icon: BookOpen },
+];
 
 export function Navbar() {
+  const pathname = usePathname();
   const { address, isConnected } = useAccount();
-  const { connect } = useConnect();
+  const { connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
+  const { setUserConnected } = useStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    setUserConnected(isConnected, address);
+  }, [isConnected, address, setUserConnected]);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleConnect = () => {
     connect({ connector: injected() });
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-3">
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-blue-600 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-            <div className="relative w-10 h-10 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center font-black text-cyan-400">
-              9
+    <>
+      <nav className={cn(
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        scrolled 
+          ? "bg-[hsl(var(--background))]/95 backdrop-blur-xl border-b border-[hsl(var(--border))]" 
+          : "bg-transparent"
+      )}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16 sm:h-20">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl blur opacity-30 group-hover:opacity-60 transition duration-500" />
+                <div className="relative w-10 h-10 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl flex items-center justify-center">
+                  <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">M</span>
+                </div>
+              </div>
+              <div className="hidden sm:block">
+                <span className="text-xl font-bold text-white">Mirror</span>
+                <span className="text-xl font-bold text-cyan-400">-AI</span>
+              </div>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-1 p-1 bg-[hsl(var(--secondary))]/50 border border-[hsl(var(--border))]/50 rounded-full">
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-cyan-500/20 text-cyan-400"
+                        : "text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--secondary))]"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Wallet & Mobile Menu */}
+            <div className="flex items-center gap-3">
+              {isConnected ? (
+                <div className="flex items-center gap-2">
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] rounded-full">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-sm font-mono text-[hsl(var(--muted-foreground))]">
+                      {address?.slice(0, 6)}...{address?.slice(-4)}
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => disconnect()}>
+                    断开
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={handleConnect} loading={isPending} size="sm">
+                  <Wallet size={16} />
+                  <span className="hidden sm:inline">连接钱包</span>
+                </Button>
+              )}
+
+              {/* Mobile menu button */}
+              <button
+                className="md:hidden p-2 rounded-lg hover:bg-[hsl(var(--secondary))] transition-colors"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
             </div>
           </div>
-          <span className="text-2xl font-black tracking-tighter uppercase italic">
-            908 <span className="text-cyan-400 not-italic">Quant</span>
-          </span>
-        </Link>
-
-        {/* Navigation Links */}
-        <div className="hidden lg:flex items-center gap-1 bg-slate-900/50 border border-slate-800/50 p-1 rounded-full backdrop-blur-xl">
-          <NavLink href="/strategies" label="Strategies" />
-          <NavLink href="/dashboard" label="Dashboard" />
-          <NavLink href="#docs" label="Docs" />
         </div>
+      </nav>
 
-        {/* Connect Wallet Button */}
-        {isConnected ? (
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-full text-sm font-mono">
-              {address?.slice(0, 6)}...{address?.slice(-4)}
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <div className="fixed top-16 left-0 right-0 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] p-4">
+            <div className="flex flex-col gap-2">
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href;
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors",
+                      isActive
+                        ? "bg-cyan-500/20 text-cyan-400"
+                        : "text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--secondary))]"
+                    )}
+                  >
+                    <Icon size={20} />
+                    {link.label}
+                  </Link>
+                );
+              })}
             </div>
-            <Button variant="secondary" size="sm" onClick={() => disconnect()}>
-              Disconnect
-            </Button>
           </div>
-        ) : (
-          <Button onClick={handleConnect}>
-            <Wallet size={16} className="mr-2" />
-            Connect Wallet
-          </Button>
-        )}
-      </div>
-    </nav>
-  );
-}
-
-function NavLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-500 hover:text-slate-200 hover:bg-slate-800"
-    >
-      {label}
-    </Link>
+        </div>
+      )}
+    </>
   );
 }
