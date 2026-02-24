@@ -157,6 +157,42 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ id: s
                 </CardContent>
               </Card>
 
+              {/* Strategy Features */}
+              {strategy.detailedFeatures && strategy.detailedFeatures.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      策略详情
+                      {strategy.managerName && (
+                        <span className="text-sm font-normal text-[hsl(var(--muted-foreground))]">
+                          · 基金经理：{strategy.managerName}
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      {strategy.detailedFeatures.map((feature, index) => (
+                        <div key={index} className="space-y-2">
+                          <h4 className="font-semibold text-cyan-400 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                            {feature.title}
+                          </h4>
+                          <ul className="space-y-1.5 text-sm text-[hsl(var(--muted-foreground))]">
+                            {feature.items.map((item, itemIndex) => (
+                              <li key={itemIndex} className="flex items-start gap-2">
+                                <span className="text-[hsl(var(--border))] mt-1.5">•</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Recent Trades */}
               <Card>
                 <CardHeader>
@@ -280,16 +316,33 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ id: s
               {/* Strategy Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>策略说明</CardTitle>
+                  <CardTitle>投资须知</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
-                    {strategy.description}
-                    <br /><br />
-                    该策略通过机器学习算法识别市场信号，自动执行交易决策。
-                    适合{riskLabels[strategy.riskLevel].replace('风险', '')}风险偏好的投资者。
-                    所有交易记录链上可查，资产由智能合约托管，确保安全透明。
-                  </p>
+                <CardContent className="space-y-3">
+                  <div className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+                    <span className="text-[hsl(var(--muted-foreground))]">
+                      适合{riskLabels[strategy.riskLevel].replace('风险', '')}风险偏好的投资者
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+                    <span className="text-[hsl(var(--muted-foreground))]">
+                      所有交易记录链上可查，透明公开
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+                    <span className="text-[hsl(var(--muted-foreground))]">
+                      资产由智能合约托管，安全可靠
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm">
+                    <AlertCircle size={16} className="text-yellow-400 mt-0.5 shrink-0" />
+                    <span className="text-[hsl(var(--muted-foreground))]">
+                      投资有风险，历史收益不代表未来表现
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
             </div>

@@ -1,9 +1,16 @@
 import { create } from 'zustand';
 
+export interface StrategyFeature {
+  title: string;
+  items: string[];
+}
+
 export interface Strategy {
   id: string;
   name: string;
   description: string;
+  detailedFeatures?: StrategyFeature[];
+  managerName?: string;
   type: 'gold_quant' | 'btc_quant' | 'leader_subjective';
   assetClass: 'commodity' | 'crypto' | 'mixed';
   riskLevel: 1 | 2 | 3;
@@ -54,7 +61,25 @@ const mockStrategies: Strategy[] = [
   {
     id: '1',
     name: '黄金量化策略',
-    description: '基于微软开源模型的黄金量化交易策略，结合历史数据和实时市场信号',
+    description: '基于 AI 驱动的黄金期货量化交易策略。通过机器学习模型分析黄金价格的周期性波动、宏观经济指标及避险情绪，精准捕捉短期套利机会。策略采用严格的风控体系，单笔最大亏损控制在 2% 以内，适合追求稳健收益的保守型投资者。',
+    detailedFeatures: [
+      {
+        title: '交易标的',
+        items: ['黄金现货（XAUUSD）', '黄金期货（GC）', '黄金 ETF（GLD）']
+      },
+      {
+        title: '策略特点',
+        items: ['AI 模型实时分析宏观经济数据', '捕捉黄金周期性波动机会', '严格止损机制，单笔亏损 ≤2%', '日均 2-5 次交易，持仓周期 4-48 小时']
+      },
+      {
+        title: '风控措施',
+        items: ['单笔仓位上限 20%', '每日最大亏损限额 5%', '波动率过高时自动减仓', '避险情绪指标实时监控']
+      },
+      {
+        title: '适合人群',
+        items: ['追求稳健收益的保守型投资者', '希望资产配置中增加避险品种', '对黄金市场感兴趣的新手投资者']
+      }
+    ],
     type: 'gold_quant',
     assetClass: 'commodity',
     riskLevel: 1,
@@ -77,7 +102,25 @@ const mockStrategies: Strategy[] = [
   {
     id: '2',
     name: 'BTC 量化策略',
-    description: '针对 BTC 高波动性优化的量化策略，自动捕捉趋势和反转信号',
+    description: '专为加密货币高波动市场设计的智能量化策略。运用多因子模型结合链上数据分析，自动识别 BTC 的趋势突破与超卖反弹信号。策略内置动态止盈止损机制，在捕捉上涨行情的同时有效控制回撤，适合能承受一定波动、追求较高收益的成长型投资者。',
+    detailedFeatures: [
+      {
+        title: '交易标的',
+        items: ['比特币永续合约（BTCUSDT）', 'BTC 现货', '相关加密货币联动品种']
+      },
+      {
+        title: '策略特点',
+        items: ['多因子量化模型实时运算', '链上数据（大户持仓、资金流向）辅助判断', '趋势突破 + 超卖反弹双策略并行', '动态调整止盈止损点位']
+      },
+      {
+        title: '风控措施',
+        items: ['单笔杠杆上限 3 倍', '浮亏超 8% 强制减仓', '极端行情自动暂停交易', '分批建仓降低择时风险']
+      },
+      {
+        title: '适合人群',
+        items: ['能承受较高波动的成长型投资者', '看好加密货币长期发展', '希望通过量化方式参与 BTC 交易']
+      }
+    ],
     type: 'btc_quant',
     assetClass: 'crypto',
     riskLevel: 2,
@@ -100,7 +143,26 @@ const mockStrategies: Strategy[] = [
   {
     id: '3',
     name: '龙头主观策略',
-    description: '跟单见崎的主观策略，涵盖美股 AI/存储龙头、BTC、黄金',
+    description: '跟单资深基金经理金明的核心主观策略。聚焦美股 Top 100 头部股票，核心持仓精选 Mag 7 科技巨头及 AI 存储主线标的；同时配置黄金、BTC 等负相关资产实现多元化风险对冲。策略灵活运用空仓、做空及 ETF 工具进行动态调仓，并通过主流汇率对（如 USD/CNY）操作增强收益敞口，追求绝对回报。',
+    managerName: '金明',
+    detailedFeatures: [
+      {
+        title: '核心持仓选择',
+        items: ['主仓集中在 Mag 7（苹果、微软、谷歌、亚马逊、Meta、英伟达、特斯拉）', '重点关注 AI 存储相关主线标的', '覆盖美股前 100 只头部股票分析']
+      },
+      {
+        title: '多资产配置',
+        items: ['涵盖黄金、BTC 等主流资产', '配置负相关资产策略，降低组合整体风险', '追求资产间的风险对冲效应']
+      },
+      {
+        title: '风险管理与调整',
+        items: ['灵活运用空仓和做空工具对冲风险', '通过 ETF 实现投资组合的多元化风险调整', '根据市场情况进行实时动态调仓']
+      },
+      {
+        title: '收益增强',
+        items: ['通过主流汇率对（如 USD/CNY）操作增加收益敞口', '把握宏观经济趋势带来的汇率机会', '追求绝对回报而非相对收益']
+      }
+    ],
     type: 'leader_subjective',
     assetClass: 'mixed',
     riskLevel: 2,
