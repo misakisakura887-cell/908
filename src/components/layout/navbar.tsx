@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Wallet, Menu, X, LayoutDashboard, TrendingUp, BookOpen } from 'lucide-react';
+import { Wallet, Menu, X, LayoutDashboard, TrendingUp, BookOpen, CircleDollarSign } from 'lucide-react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { useStore } from '@/lib/store';
@@ -11,9 +11,9 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
-  { href: '/strategies', label: '策略广场', icon: TrendingUp },
-  { href: '/dashboard', label: '我的投资', icon: LayoutDashboard },
-  { href: '#docs', label: '文档', icon: BookOpen },
+  { href: '/invest', label: '一键跟单', icon: TrendingUp },
+  { href: '/dashboard', label: '我的收益', icon: LayoutDashboard },
+  { href: '/ramp', label: '充值提现', icon: CircleDollarSign },
 ];
 
 export function Navbar() {

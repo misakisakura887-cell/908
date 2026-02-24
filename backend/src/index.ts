@@ -7,6 +7,9 @@ import 'dotenv/config';
 import { authRoutes } from './routes/auth';
 import { strategyRoutes } from './routes/strategies';
 import { positionRoutes } from './routes/positions';
+import { copyTradeRoutes } from './routes/copy-trade';
+import { copyTradeSecureRoutes } from './routes/copy-trade-secure';
+import { registerSecurityMiddleware } from './middleware/security';
 
 const fastify = Fastify({ logger: true });
 const prisma = new PrismaClient();
@@ -31,6 +34,9 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
   }
 });
 
+// 注册安全中间件（速率限制、安全头）
+registerSecurityMiddleware(fastify);
+
 // Health check
 fastify.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
@@ -40,6 +46,8 @@ fastify.get('/health', async () => {
 fastify.register(authRoutes, { prefix: '/api/auth' });
 fastify.register(strategyRoutes, { prefix: '/api/strategies' });
 fastify.register(positionRoutes, { prefix: '/api/positions' });
+fastify.register(copyTradeRoutes);
+fastify.register(copyTradeSecureRoutes); // 安全版 API (v2)
 
 // Start server
 const start = async () => {
