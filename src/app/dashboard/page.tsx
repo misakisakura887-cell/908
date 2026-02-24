@@ -7,7 +7,7 @@ import { Navbar } from '@/components/layout/navbar';
 import { PerformanceChart } from '@/components/charts/performance-chart';
 import { AssetPieChart } from '@/components/charts/pie-chart';
 import { useStore } from '@/lib/store';
-import { useAccount } from 'wagmi';
+
 import { 
   TrendingUp, Activity, DollarSign, Wallet, ArrowUpRight, ArrowDownRight,
   RefreshCw, Eye, EyeOff, Plus
@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { user, strategies, withdraw, isWithdrawing } = useStore();
-  const { isConnected } = useAccount();
+  
   const [hideBalance, setHideBalance] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -54,27 +54,7 @@ export default function DashboardPage() {
     return data;
   }, [user.totalInvested, user.totalAssets]);
 
-  if (!isConnected) {
-    return (
-      <>
-        <Navbar />
-        <main className="min-h-screen pt-24 pb-12 px-4 sm:px-6">
-          <div className="max-w-7xl mx-auto">
-            <Card className="text-center py-16">
-              <Wallet size={48} className="mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
-              <h2 className="text-2xl font-bold mb-2">请先连接钱包</h2>
-              <p className="text-[hsl(var(--muted-foreground))] mb-6">
-                连接钱包后即可查看您的投资组合
-              </p>
-              <Link href="/strategies">
-                <Button>浏览策略</Button>
-              </Link>
-            </Card>
-          </div>
-        </main>
-      </>
-    );
-  }
+  // 使用 mock 数据展示，后续可接入真实 API
 
   return (
     <>

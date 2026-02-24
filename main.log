@@ -158,3 +158,74 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
 ✓ Compiled in 616ms
 ✓ Compiled in 122ms
 ✓ Compiled in 618ms
+⨯ ./src/app/globals.css:2228:8
+Parsing CSS source code failed
+[0m [90m 2226 |[39m   }
+ [90m 2227 |[39m }
+[31m[1m>[22m[39m[90m 2228 |[39m [33m@[39m[36mimport[39m url([32m'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap'[39m)[33m;[39m
+ [90m      |[39m        [31m[1m^[22m[39m
+ [90m 2229 |[39m [33m:[39mroot {
+ [90m 2230 |[39m   [33m--[39mbg[33m-[39mprimary[33m:[39m [33m#[39m[35m040405[39m[33m;[39m
+ [90m 2231 |[39m   [33m--[39mbg[33m-[39msecondary[33m:[39m [33m#[39m[35m0[39ma0a0f[33m;[39m[0m
+
+@import rules must precede all rules aside from @charset and @layer statements
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 1370ms (compile: 1227ms, render: 143ms)
+✓ Compiled in 90ms
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /strategies/2 200 in 229ms (compile: 71ms, render: 158ms)
+ GET /ramp 200 in 226ms (compile: 163ms, render: 63ms)
+ GET / 200 in 552ms (compile: 110ms, render: 442ms)
+ GET /strategies/2 200 in 21ms (compile: 3ms, render: 18ms)
+ GET /ramp 200 in 47ms (compile: 3ms, render: 44ms)
+ GET /strategies/2 200 in 31ms (compile: 3ms, render: 28ms)
+ GET /ramp 200 in 19ms (compile: 4ms, render: 16ms)
+ GET /strategies/2 200 in 48ms (compile: 8ms, render: 40ms)
+ GET /ramp 200 in 23ms (compile: 4ms, render: 20ms)
+ GET /ramp 200 in 33ms (compile: 3ms, render: 30ms)
+ GET /strategies/2 200 in 18ms (compile: 3ms, render: 16ms)
+ GET /ramp 200 in 42ms (compile: 5ms, render: 37ms)
+ GET /strategies/2 200 in 23ms (compile: 6ms, render: 17ms)
+✓ Compiled in 30ms
+ GET /ramp 200 in 304ms (compile: 46ms, render: 258ms)
+ GET / 200 in 304ms (compile: 132ms, render: 173ms)
+ GET /strategies/2 200 in 153ms (compile: 56ms, render: 97ms)
+ GET /ramp 200 in 153ms (compile: 85ms, render: 68ms)
+ GET / 200 in 49ms (compile: 5ms, render: 44ms)
+ GET /strategies/2 200 in 31ms (compile: 4ms, render: 27ms)
+ GET / 200 in 141ms (compile: 10ms, render: 131ms)
+ GET /ramp 200 in 141ms (compile: 27ms, render: 114ms)
+ GET /strategies/2 200 in 86ms (compile: 4ms, render: 82ms)
+ GET / 200 in 86ms (compile: 30ms, render: 57ms)
+ GET /ramp 200 in 86ms (compile: 42ms, render: 45ms)
+ GET /strategies/2 200 in 30ms (compile: 7ms, render: 23ms)
+ GET / 200 in 29ms (compile: 3ms, render: 26ms)
+ GET /ramp 200 in 29ms (compile: 15ms, render: 14ms)
+ GET /strategies/2 200 in 91ms (compile: 3ms, render: 88ms)
+ GET / 200 in 69ms (compile: 9ms, render: 60ms)
+ GET /ramp 200 in 69ms (compile: 24ms, render: 45ms)
+ GET /strategies/2 200 in 31ms (compile: 4ms, render: 27ms)
+ GET / 200 in 123ms (compile: 4ms, render: 119ms)
+ GET /strategies/1 200 in 33ms (compile: 8ms, render: 24ms)
+ GET /strategies 200 in 94ms (compile: 70ms, render: 24ms)
+ GET /dashboard 200 in 90ms (compile: 66ms, render: 25ms)
+ GET /ramp 200 in 17ms (compile: 5ms, render: 12ms)
+ GET /invest 200 in 87ms (compile: 65ms, render: 22ms)
+ GET / 200 in 21ms (compile: 6ms, render: 15ms)
+ GET /strategies 200 in 24ms (compile: 12ms, render: 12ms)
+ GET /dashboard 200 in 19ms (compile: 4ms, render: 15ms)
+ GET /ramp 200 in 16ms (compile: 5ms, render: 11ms)
+ GET / 200 in 45ms (compile: 4ms, render: 41ms)
+ GET /strategies 200 in 15ms (compile: 4ms, render: 11ms)
+ GET / 200 in 47ms (compile: 4ms, render: 43ms)
+ GET /invest 200 in 16ms (compile: 4ms, render: 12ms)
+✓ Compiled in 177ms
+✓ Compiled in 170ms
+✓ Compiled in 67ms
+[?25h

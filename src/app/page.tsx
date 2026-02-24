@@ -608,11 +608,14 @@ function Footer() {
 }
 
 // ============ Main Page ============
+import { MarketOverview } from '@/components/market/market-overview';
+
 export default function HomePage() {
   return (
     <main className="relative min-h-screen bg-[#040405]">
       <Navbar />
       <Hero />
+      <MarketOverview />
       <Features />
       <Strategies />
       <CTA />

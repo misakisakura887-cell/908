@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/layout/navbar';
 import { PerformanceChart } from '@/components/charts/performance-chart';
 import { useStore } from '@/lib/store';
-import { useAccount } from 'wagmi';
+
 import { 
   TrendingUp, Shield, Activity, Users, ArrowUpRight, ArrowDownRight, 
   ChevronLeft, AlertCircle, CheckCircle2, Info
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 export default function StrategyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { getStrategyById, investAmount, setInvestAmount, invest, isInvesting, user } = useStore();
-  const { isConnected } = useAccount();
+  
   const strategy = getStrategyById(id);
   const [investSuccess, setInvestSuccess] = useState(false);
 
@@ -43,7 +43,7 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const handleInvest = async () => {
-    if (!isConnected || investAmount <= 0) return;
+    if ( investAmount <= 0) return;
     const success = await invest(strategy.id, investAmount);
     if (success) {
       setInvestSuccess(true);
@@ -304,10 +304,10 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ id: s
                     <Button 
                       className="w-full" 
                       onClick={handleInvest}
-                      disabled={!isConnected || investAmount <= 0}
+                      disabled={ investAmount <= 0}
                       loading={isInvesting}
                     >
-                      {!isConnected ? '请先连接钱包' : investAmount <= 0 ? '请输入金额' : `投资 $${investAmount}`}
+                      { investAmount <= 0 ? '请输入金额' : `投资 $${investAmount}`}
                     </Button>
                   )}
                 </CardContent>

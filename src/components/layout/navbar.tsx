@@ -3,17 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Wallet, Menu, X, LayoutDashboard, TrendingUp, BookOpen, CircleDollarSign } from 'lucide-react';
+import { Wallet, Menu, X, LayoutDashboard, TrendingUp, CircleDollarSign, ArrowDownToLine } from 'lucide-react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { useStore } from '@/lib/store';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
-  { href: '/invest', label: '一键跟单', icon: TrendingUp },
-  { href: '/dashboard', label: '我的收益', icon: LayoutDashboard },
-  { href: '/ramp', label: '充值提现', icon: CircleDollarSign },
+  { href: '/invest', label: '跟单投资', icon: TrendingUp },
+  { href: '/creator', label: 'Strategy Owner', icon: LayoutDashboard },
 ];
 
 export function Navbar() {
@@ -21,13 +19,8 @@ export function Navbar() {
   const { address, isConnected } = useAccount();
   const { connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
-  const { setUserConnected } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    setUserConnected(isConnected, address);
-  }, [isConnected, address, setUserConnected]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -84,17 +77,26 @@ export function Navbar() {
               })}
             </div>
 
-            {/* Wallet & Mobile Menu */}
-            <div className="flex items-center gap-3">
+            {/* Right Buttons */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Deposit Button */}
+              <Link href="/ramp">
+                <Button variant="secondary" size="sm" className="border border-[hsl(var(--border))]">
+                  <ArrowDownToLine size={16} />
+                  <span className="hidden sm:inline">存入</span>
+                </Button>
+              </Link>
+
+              {/* Wallet Button */}
               {isConnected ? (
                 <div className="flex items-center gap-2">
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] rounded-full">
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] rounded-xl">
                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-sm font-mono text-[hsl(var(--muted-foreground))]">
                       {address?.slice(0, 6)}...{address?.slice(-4)}
                     </span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => disconnect()}>
+                  <Button variant="ghost" size="sm" onClick={() => disconnect()} className="text-red-400 hover:text-red-300">
                     断开
                   </Button>
                 </div>
@@ -143,6 +145,14 @@ export function Navbar() {
                   </Link>
                 );
               })}
+              <Link
+                href="/ramp"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--secondary))] transition-colors"
+              >
+                <CircleDollarSign size={20} />
+                存入 / 提现
+              </Link>
             </div>
           </div>
         </div>
