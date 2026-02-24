@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Wallet, Clock, CheckCircle, XCircle, AlertCircle, TrendingUp, Shield, Zap, Gift, ArrowDownUp } from 'lucide-react';
 import Link from 'next/link';
 
-const API_BASE = 'http://192.168.2.108:3000/api';
+import { API_BASE } from '@/lib/config';
 
 interface PriceData {
   buyPrice: string;
@@ -544,7 +544,7 @@ export default function RampPage() {
                       使用{depositMethod === 'WECHAT' ? '微信' : '支付宝'}扫描下方二维码完成支付
                     </p>
                     <img
-                      src={`http://192.168.2.108:3000/public/qrcodes/${depositMethod === 'WECHAT' ? 'wechat' : 'alipay'}.jpg`}
+                      src={`${API_BASE.replace("/api", "/public/qrcodes/")}${depositMethod === 'WECHAT' ? 'wechat' : 'alipay'}.jpg`}
                       alt="收款码"
                       className="w-52 h-52 mx-auto rounded-xl border border-[hsl(var(--border))]"
                     />

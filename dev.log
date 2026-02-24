@@ -9,3 +9,17 @@
 ✓ Starting...
 ✓ Ready in 932ms
  GET / 200 in 621ms (compile: 378ms, render: 243ms)
+ GET / 200 in 58ms (compile: 6ms, render: 52ms)
+ GET / 200 in 52ms (compile: 9ms, render: 44ms)
+ GET / 200 in 48ms (compile: 4ms, render: 44ms)
+ GET /invest 200 in 158ms (compile: 78ms, render: 80ms)
+ GET /strategies 200 in 196ms (compile: 65ms, render: 132ms)
+ GET /ramp 200 in 102ms (compile: 30ms, render: 73ms)
+ GET / 200 in 57ms (compile: 9ms, render: 49ms)
+ GET /invest 200 in 33ms (compile: 5ms, render: 28ms)
+ GET /strategies 200 in 50ms (compile: 12ms, render: 38ms)
+ GET /dashboard 200 in 164ms (compile: 53ms, render: 111ms)
+ GET /ramp 200 in 43ms (compile: 5ms, render: 38ms)
+ GET /market 200 in 723ms (compile: 668ms, render: 55ms)
+ GET /creator 200 in 725ms (compile: 661ms, render: 64ms)
+  Reload env: .env.local

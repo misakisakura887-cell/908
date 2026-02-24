@@ -10,7 +10,7 @@ import {
   AlertTriangle, CheckCircle, Clock, ArrowUpRight
 } from 'lucide-react';
 
-const API_BASE = 'http://192.168.2.108:3000/api';
+import { API_BASE } from '@/lib/config';
 
 interface CryptoData {
   btc: { price: number; change24h: number; volume24h: number; marketCap: number };

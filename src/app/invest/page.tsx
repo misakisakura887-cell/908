@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { TrendingUp, ArrowRight, Wallet, CheckCircle, AlertCircle, Zap, Shield, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
-const API_BASE = 'http://192.168.2.108:3000/api';
+import { API_BASE } from '@/lib/config';
 
 interface Strategy {
   id: string;
