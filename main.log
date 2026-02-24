@@ -150,3 +150,11 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET /dashboard 200 in 17ms (compile: 5ms, render: 12ms)
  GET /ramp 200 in 20ms (compile: 7ms, render: 13ms)
  GET / 200 in 30ms (compile: 7ms, render: 22ms)
+ GET /strategies 200 in 24ms (compile: 9ms, render: 15ms)
+ GET /dashboard 200 in 17ms (compile: 5ms, render: 12ms)
+ GET /ramp 200 in 18ms (compile: 6ms, render: 12ms)
+ GET /invest 200 in 26ms (compile: 9ms, render: 17ms)
+ GET /ramp 200 in 15ms (compile: 4ms, render: 11ms)
+✓ Compiled in 616ms
+✓ Compiled in 122ms
+✓ Compiled in 618ms

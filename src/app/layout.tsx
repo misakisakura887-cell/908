@@ -35,7 +35,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN" className="dark">
-      <body className={`${inter.variable} font-sans bg-[hsl(220,20%,4%)] text-white antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body className={`${inter.variable} font-sans bg-[#040405] text-white antialiased overflow-x-hidden`}>
         <Providers>{children}</Providers>
       </body>
     </html>
