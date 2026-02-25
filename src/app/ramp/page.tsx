@@ -146,7 +146,7 @@ export default function RampPage() {
   const markPaid = async () => {
     setLoading(true);
     try {
-      await api(`/ramp/deposit/${depositOrder.id}/paid`, { method: 'POST' });
+      await api(`/ramp/deposit/${depositOrder.id}/paid`, { method: 'POST', body: JSON.stringify({}) });
       setDepositOrder({ ...depositOrder, status: 'PAID' });
       const me = await api('/auth/me');
       setUser(me);
@@ -544,7 +544,7 @@ export default function RampPage() {
                       使用{depositMethod === 'WECHAT' ? '微信' : '支付宝'}扫描下方二维码完成支付
                     </p>
                     <img
-                      src={`${API_BASE.replace("/api", "/public/qrcodes/")}${depositMethod === 'WECHAT' ? 'wechat' : 'alipay'}.jpg`}
+                      src={`${API_BASE.replace("/api", "")}/public/qrcodes/${depositMethod === 'WECHAT' ? 'wechat' : 'alipay'}.jpg`}
                       alt="收款码"
                       className="w-52 h-52 mx-auto rounded-xl border border-[hsl(var(--border))]"
                     />
