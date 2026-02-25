@@ -8,7 +8,7 @@ import {
   Bitcoin, DollarSign, BarChart3, Flame
 } from 'lucide-react';
 
-const API_BASE = 'http://192.168.2.108:3000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.2.108:3001/api';
 
 interface CryptoData {
   btc: { price: number; change24h: number; volume24h: number; marketCap: number };

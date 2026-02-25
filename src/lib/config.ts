@@ -7,7 +7,7 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.2.108:3001/api';
 
 // WebSocket URL
-export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000';
+export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://192.168.2.108:3001';
 
 // 是否为开发环境
 export const isDev = process.env.NODE_ENV === 'development';
