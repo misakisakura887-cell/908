@@ -1,30 +1,32 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Wallet, Menu, X, LayoutDashboard, TrendingUp, CircleDollarSign, ArrowDownToLine } from 'lucide-react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { Wallet, Menu, X, TrendingUp, ArrowDownToLine, LayoutDashboard, User } from 'lucide-react';
+import { useAccount, useConnect, useDisconnect, useSignMessage } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { getNonce, walletLogin, signMessage, setToken, setUser, clearToken, getToken } from '@/lib/auth';
+import { getNonce, walletLogin, setToken, setUser, clearToken, getToken, getUser } from '@/lib/auth';
 import { toast } from 'sonner';
 
 const navLinks = [
   { href: '/invest', label: '跟单投资', icon: TrendingUp },
-  { href: '/creator', label: 'Strategy Owner', icon: LayoutDashboard },
+  { href: '/dashboard', label: '我的面板', icon: LayoutDashboard, authRequired: true },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { connect, isPending } = useConnect();
+  const { connect, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
+  const { signMessageAsync } = useSignMessage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -32,45 +34,48 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 检查是否已登录
   useEffect(() => {
-    const token = getToken();
-    setIsLoggedIn(!!token);
+    setIsLoggedIn(!!getToken());
   }, []);
 
-  // 钱包连接后自动登录
+  // 钱包连接后自动触发登录
   useEffect(() => {
     if (isConnected && address && !isLoggedIn && !isLoggingIn) {
       handleWalletLogin(address);
     }
-  }, [isConnected, address, isLoggedIn]);
+  }, [isConnected, address]);
 
-  const handleWalletLogin = async (walletAddress: string) => {
+  const handleWalletLogin = useCallback(async (walletAddress: string) => {
+    if (isLoggingIn) return;
     setIsLoggingIn(true);
     try {
-      // 1. 获取 nonce
+      // 1. 从后端获取 nonce message
       const message = await getNonce(walletAddress);
       
-      // 2. 签名
-      const signature = await signMessage(message);
+      // 2. 使用 wagmi 的 signMessage（兼容所有钱包）
+      const signature = await signMessageAsync({ message });
       
-      // 3. 登录
+      // 3. 发送到后端验证
       const { token, user } = await walletLogin(walletAddress, message, signature);
       
-      // 4. 存储 token 和用户信息
+      // 4. 存储
       setToken(token);
       setUser(user);
       setIsLoggedIn(true);
       
-      toast.success('登录成功！');
-    } catch (error) {
+      toast.success('钱包登录成功！');
+    } catch (error: any) {
       console.error('Login error:', error);
-      toast.error('登录失败，请重试');
+      if (error?.message?.includes('User rejected')) {
+        toast.error('您拒绝了签名请求');
+      } else {
+        toast.error('登录失败: ' + (error?.message || '未知错误'));
+      }
       disconnect();
     } finally {
       setIsLoggingIn(false);
     }
-  };
+  }, [isLoggingIn, signMessageAsync, disconnect]);
 
   const handleConnect = () => {
     connect({ connector: injected() });
@@ -109,44 +114,43 @@ export function Navbar() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-1 p-1 bg-[hsl(var(--secondary))]/50 border border-[hsl(var(--border))]/50 rounded-full">
-              {navLinks.map((link) => {
-                const isActive = pathname === link.href;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-                      isActive
-                        ? "bg-cyan-500/20 text-cyan-400"
-                        : "text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--secondary))]"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
+              {navLinks
+                .filter(link => !link.authRequired || isLoggedIn)
+                .map((link) => {
+                  const isActive = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                        isActive
+                          ? "bg-cyan-500/20 text-cyan-400"
+                          : "text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--secondary))]"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
             </div>
 
             {/* Right Buttons */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Deposit Button */}
-              <Link href="/ramp">
-                <Button variant="secondary" size="sm" className="border border-[hsl(var(--border))]">
-                  <ArrowDownToLine size={16} />
-                  <span className="hidden sm:inline">存入</span>
-                </Button>
-              </Link>
+              {isLoggedIn && (
+                <Link href="/ramp">
+                  <Button variant="secondary" size="sm" className="border border-[hsl(var(--border))]">
+                    <ArrowDownToLine size={16} />
+                    <span className="hidden sm:inline">存入</span>
+                  </Button>
+                </Link>
+              )}
 
-              {/* Wallet Button */}
-              {isConnected ? (
+              {isConnected && isLoggedIn ? (
                 <div className="flex items-center gap-2">
                   <Link href="/dashboard">
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--secondary))]/80 transition-colors cursor-pointer">
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        isLoggedIn ? "bg-emerald-400 animate-pulse" : "bg-yellow-400 animate-pulse"
-                      )} />
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] rounded-xl cursor-pointer hover:border-cyan-500/50 transition-colors">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                       <span className="text-sm font-mono text-[hsl(var(--muted-foreground))]">
                         {address?.slice(0, 6)}...{address?.slice(-4)}
                       </span>
@@ -157,13 +161,14 @@ export function Navbar() {
                   </Button>
                 </div>
               ) : (
-                <Button onClick={handleConnect} loading={isPending || isLoggingIn} size="sm">
+                <Button onClick={handleConnect} loading={isConnecting || isLoggingIn} size="sm">
                   <Wallet size={16} />
-                  <span className="hidden sm:inline">{isLoggingIn ? '登录中...' : '连接钱包'}</span>
+                  <span className="hidden sm:inline">
+                    {isLoggingIn ? '签名中...' : '连接钱包'}
+                  </span>
                 </Button>
               )}
 
-              {/* Mobile menu button */}
               <button
                 className="md:hidden p-2 rounded-lg hover:bg-[hsl(var(--secondary))] transition-colors"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -175,40 +180,33 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
           <div className="fixed top-16 left-0 right-0 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] p-4">
             <div className="flex flex-col gap-2">
-              {navLinks.map((link) => {
-                const isActive = pathname === link.href;
-                const Icon = link.icon;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors",
-                      isActive
-                        ? "bg-cyan-500/20 text-cyan-400"
-                        : "text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--secondary))]"
-                    )}
-                  >
-                    <Icon size={20} />
-                    {link.label}
-                  </Link>
-                );
-              })}
-              <Link
-                href="/ramp"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--secondary))] transition-colors"
-              >
-                <CircleDollarSign size={20} />
-                存入 / 提现
-              </Link>
+              {navLinks
+                .filter(link => !link.authRequired || isLoggedIn)
+                .map((link) => {
+                  const isActive = pathname === link.href;
+                  const Icon = link.icon;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors",
+                        isActive
+                          ? "bg-cyan-500/20 text-cyan-400"
+                          : "text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--secondary))]"
+                      )}
+                    >
+                      <Icon size={20} />
+                      {link.label}
+                    </Link>
+                  );
+                })}
             </div>
           </div>
         </div>
