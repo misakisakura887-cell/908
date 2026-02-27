@@ -67,6 +67,18 @@ export default function StrategyDetailPage() {
     const token = getToken();
     if (!token) {
       toast.error('请先连接钱包并登录');
+      router.push('/');
+      return;
+    }
+
+    // 检查是否绑定 HL
+    const savedUser = localStorage.getItem('mirror_user');
+    const user = savedUser ? JSON.parse(savedUser) : null;
+    if (!user?.hlAddress) {
+      toast.error('请先绑定 Hyperliquid 钱包');
+      setTimeout(() => {
+        router.push('/dashboard/bind-hl');
+      }, 1500);
       return;
     }
 
@@ -92,7 +104,9 @@ export default function StrategyDetailPage() {
 
       if (response.ok) {
         toast.success('跟单成功！');
-        router.push('/dashboard');
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 1000);
       } else {
         const error = await response.json();
         toast.error(error.error || '跟单失败');

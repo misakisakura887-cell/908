@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,7 @@ const riskLabels: Record<number, { label: string; color: string }> = {
 };
 
 export default function InvestPage() {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -57,16 +59,26 @@ export default function InvestPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('mirror-ramp-auth');
-    if (saved) {
-      try {
-        const { token } = JSON.parse(saved);
-        setToken(token);
-      } catch {}
+    const savedToken = localStorage.getItem('mirror_token');
+    if (savedToken) {
+      setToken(savedToken);
     }
     
-    fetch(`${API_BASE}/invest/strategies`).then(r => r.json()).then(setStrategies).catch(() => {});
+    // 加载策略列表
+    loadStrategies();
   }, []);
+
+  const loadStrategies = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/invest/strategies`);
+      if (response.ok) {
+        const data = await response.json();
+        setStrategies(data);
+      }
+    } catch (error) {
+      console.error('Failed to load strategies:', error);
+    }
+  };
 
   useEffect(() => {
     if (token) {
@@ -87,6 +99,25 @@ export default function InvestPage() {
 
   const handleInvest = async () => {
     if (!selectedStrategy || !investAmount) return;
+    
+    // 检查是否登录
+    if (!token) {
+      setError('请先连接钱包并登录');
+      return;
+    }
+
+    // 检查是否绑定 HL
+    // 从 localStorage 获取用户信息检查 hlAddress
+    const savedUser = localStorage.getItem('mirror_user');
+    const user = savedUser ? JSON.parse(savedUser) : null;
+    if (!user?.hlAddress) {
+      setError('请先绑定 Hyperliquid 钱包');
+      setTimeout(() => {
+        router.push('/dashboard/bind-hl');
+      }, 1500);
+      return;
+    }
+
     const amount = parseFloat(investAmount);
     if (amount < 1) return setError('最低投资 1 USDT');
     if (summary && amount > parseFloat(summary.balance)) return setError('余额不足，请先入金');
@@ -96,7 +127,7 @@ export default function InvestPage() {
     setSuccess('');
 
     try {
-      const res = await fetch(`${API_BASE}/invest/invest`, {
+      const res = await fetch(`${API_BASE}/copytrade/follow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ strategyId: selectedStrategy.id, amount }),
@@ -104,10 +135,12 @@ export default function InvestPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      setSuccess(`成功投资 ${amount} USDT 到 ${selectedStrategy.name}！`);
+      setSuccess(`成功跟单 ${amount} USDT 到 ${selectedStrategy.name}！`);
       setSelectedStrategy(null);
       setInvestAmount('');
-      loadData();
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
     } catch (e: any) {
       setError(e.message);
     } finally {

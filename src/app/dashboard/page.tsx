@@ -2,11 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getToken, getUser, type User } from '@/lib/auth';
+import { getToken, getCurrentUser, getCopyPositions } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Wallet, History, Settings } from 'lucide-react';
+import { TrendingUp, Wallet, History, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { Navbar } from '@/components/layout/navbar';
+import { toast } from 'sonner';
+
+interface User {
+  id: string;
+  walletAddress?: string | null;
+  email?: string | null;
+  usdtBalance: string;
+  hlAddress?: string | null;
+}
 
 interface CopyTradePosition {
   id: string;
@@ -41,30 +50,21 @@ export default function DashboardPage() {
       return;
     }
 
-    const userData = getUser();
-    setUser(userData);
+    loadData();
+  }, [router]);
 
-    // 加载跟单仓位
-    loadPositions();
-  }, []);
-
-  const loadPositions = async () => {
-    const token = getToken();
-    if (!token) return;
-
+  const loadData = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/copytrade/positions`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // 获取当前用户信息
+      const userData = await getCurrentUser();
+      setUser(userData);
 
-      if (response.ok) {
-        const data = await response.json();
-        setPositions(data);
-      }
+      // 加载跟单仓位
+      const positionsData = await getCopyPositions();
+      setPositions(positionsData);
     } catch (error) {
-      console.error('Failed to load positions:', error);
+      console.error('Failed to load data:', error);
+      toast.error('加载数据失败');
     } finally {
       setLoading(false);
     }
@@ -149,6 +149,55 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* 未绑定 HL 提示 */}
+        {!user?.hlAddress && (
+          <Card className="mb-8 border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-transparent">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-cyan-500/20 rounded-xl">
+                  <LinkIcon size={24} className="text-cyan-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold mb-1">绑定 Hyperliquid 钱包</h3>
+                  <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
+                    绑定您的 Hyperliquid 钱包以启用自动跟单功能，实时复制专业交易员的仓位。
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <Button onClick={() => router.push('/dashboard/bind-hl')} size="sm">
+                      立即绑定
+                    </Button>
+                    <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                      ✓ 安全加密存储 ✓ 仅用于跟单交易
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 已绑定 HL 提示 */}
+        {user?.hlAddress && (
+          <Card className="mb-8 border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <div>
+                    <p className="text-sm font-medium">Hyperliquid 钱包已绑定</p>
+                    <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                      {user.hlAddress.slice(0, 6)}...{user.hlAddress.slice(-4)}
+                    </p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/bind-hl')}>
+                  更换钱包
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Positions */}
         <Card>
