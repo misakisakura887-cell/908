@@ -1,302 +1,246 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getToken, getUser, type User } from '@/lib/auth';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TrendingUp, Wallet, History, Settings } from 'lucide-react';
 import { Navbar } from '@/components/layout/navbar';
-import { PerformanceChart } from '@/components/charts/performance-chart';
-import { AssetPieChart } from '@/components/charts/pie-chart';
-import { useStore } from '@/lib/store';
 
-import { 
-  TrendingUp, Activity, DollarSign, Wallet, ArrowUpRight, ArrowDownRight,
-  RefreshCw, Eye, EyeOff, Plus
-} from 'lucide-react';
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
+interface CopyTradePosition {
+  id: string;
+  strategyId: string;
+  invested: string;
+  current: string;
+  pnl: string;
+  pnlPct: string;
+  status: string;
+  positions: Array<{
+    coin: string;
+    direction: string;
+    size: number;
+    entryPrice: number;
+    currentPrice: number;
+    pnl: number;
+    pnlPct: number;
+    value: number;
+  }>;
+}
 
 export default function DashboardPage() {
-  const { user, strategies, withdraw, isWithdrawing } = useStore();
-  
-  const [hideBalance, setHideBalance] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [positions, setPositions] = useState<CopyTradePosition[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setRefreshing(false);
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      router.push('/');
+      return;
+    }
+
+    const userData = getUser();
+    setUser(userData);
+
+    // 加载跟单仓位
+    loadPositions();
+  }, []);
+
+  const loadPositions = async () => {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/copytrade/positions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPositions(data);
+      }
+    } catch (error) {
+      console.error('Failed to load positions:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const pieData = useMemo(() => {
-    const colors = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
-    return user.positions.map((pos, i) => ({
-      name: pos.strategyName,
-      value: pos.current,
-      color: colors[i % colors.length],
-    }));
-  }, [user.positions]);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#040405]">
+        <Navbar />
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-[hsl(var(--muted-foreground))]">加载中...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const performanceData = useMemo(() => {
-    const data = [];
-    let value = user.totalInvested;
-    const dailyReturn = Math.pow((user.totalAssets / user.totalInvested), 1 / 90) - 1;
-    
-    for (let i = 90; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const volatility = (Math.random() - 0.5) * 2;
-      value = value * (1 + dailyReturn + volatility / 100);
-      data.push({
-        date: date.toISOString().split('T')[0],
-        value: Math.round(value * 100) / 100,
-      });
-    }
-    return data;
-  }, [user.totalInvested, user.totalAssets]);
-
-  // 使用 mock 数据展示，后续可接入真实 API
+  const totalInvested = positions.reduce((sum, p) => sum + parseFloat(p.invested), 0);
+  const totalCurrent = positions.reduce((sum, p) => sum + parseFloat(p.current), 0);
+  const totalPnl = totalCurrent - totalInvested;
+  const totalPnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
 
   return (
-    <>
+    <div className="min-h-screen bg-[#040405]">
       <Navbar />
-      <main className="min-h-screen pt-24 pb-12 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold mb-1">我的投资</h1>
-              <p className="text-[hsl(var(--muted-foreground))]">管理你的投资组合</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setHideBalance(!hideBalance)}
-              >
-                {hideBalance ? <EyeOff size={18} /> : <Eye size={18} />}
-              </Button>
-              <Button 
-                variant="secondary" 
-                onClick={handleRefresh}
-                loading={refreshing}
-              >
-                <RefreshCw size={16} />
-                刷新
-              </Button>
-            </div>
-          </div>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-12">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">我的面板</h1>
+          <p className="text-[hsl(var(--muted-foreground))]">
+            欢迎回来，{user?.walletAddress?.slice(0, 6)}...{user?.walletAddress?.slice(-4)}
+          </p>
+        </div>
 
-          {/* Core Metrics */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl" />
-              <CardContent className="relative pt-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Wallet size={18} className="text-cyan-400" />
-                  <span className="text-sm text-[hsl(var(--muted-foreground))]">总资产</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold">
-                  {hideBalance ? '****' : `$${user.totalAssets.toLocaleString()}`}
-                </p>
-                <div className="flex items-center gap-1 text-xs text-cyan-400 mt-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                  实时
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign size={18} className="text-[hsl(var(--muted-foreground))]" />
-                  <span className="text-sm text-[hsl(var(--muted-foreground))]">总投入</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold">
-                  {hideBalance ? '****' : `$${user.totalInvested.toLocaleString()}`}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp size={18} className="text-emerald-400" />
-                  <span className="text-sm text-[hsl(var(--muted-foreground))]">累计收益</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold text-emerald-400">
-                  {hideBalance ? '****' : `+$${user.totalPnl.toLocaleString()}`}
-                </p>
-                <p className="text-sm text-emerald-400">
-                  +{((user.totalPnl / user.totalInvested) * 100).toFixed(1)}%
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Activity size={18} className="text-blue-400" />
-                  <span className="text-sm text-[hsl(var(--muted-foreground))]">今日收益</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold text-blue-400">
-                  {hideBalance ? '****' : `+$${user.todayPnl}`}
-                </p>
-                <p className="text-sm text-blue-400">
-                  +{((user.todayPnl / user.totalAssets) * 100).toFixed(2)}%
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Charts */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>资产分布</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {user.positions.length > 0 ? (
-                  <AssetPieChart data={pieData} height={240} />
-                ) : (
-                  <div className="h-60 flex items-center justify-center text-[hsl(var(--muted-foreground))]">
-                    暂无投资
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>收益曲线</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PerformanceChart 
-                  data={performanceData} 
-                  height={240}
-                  showGrid
-                  showAxis
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Positions */}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>我的策略</CardTitle>
-              <Link href="/strategies">
-                <Button size="sm">
-                  <Plus size={16} />
-                  添加策略
-                </Button>
-              </Link>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
+                <Wallet className="inline mr-2" size={16} />
+                账户余额
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {user.positions.length > 0 ? (
-                <div className="space-y-4">
-                  {user.positions.map((position) => {
-                    const strategy = strategies.find((s) => s.id === position.strategyId);
-                    return (
-                      <div 
-                        key={position.strategyId}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-[hsl(var(--secondary))]/50 rounded-xl"
-                      >
-                        <div className="flex-1">
-                          <Link href={`/strategies/${position.strategyId}`}>
-                            <h3 className="font-bold text-lg hover:text-cyan-400 transition-colors">
-                              {position.strategyName}
-                            </h3>
-                          </Link>
-                          <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                            投入: ${position.invested.toLocaleString()}
-                          </p>
-                        </div>
-                        
-                        <div className="text-right">
-                          <p className="text-xl font-bold">
-                            {hideBalance ? '****' : `$${position.current.toLocaleString()}`}
-                          </p>
-                          <p className={cn(
-                            "text-sm flex items-center justify-end gap-1",
-                            position.pnl >= 0 ? "text-emerald-400" : "text-red-400"
-                          )}>
-                            {position.pnl >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                            {position.pnl >= 0 ? '+' : ''}{position.pnlPct}%
-                          </p>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Link href={`/strategies/${position.strategyId}`}>
-                            <Button size="sm" variant="secondary">详情</Button>
-                          </Link>
-                          <Link href={`/strategies/${position.strategyId}`}>
-                            <Button size="sm">追加</Button>
-                          </Link>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-[hsl(var(--muted-foreground))] mb-4">暂无投资</p>
-                  <Link href="/strategies">
-                    <Button>浏览策略</Button>
-                  </Link>
-                </div>
-              )}
+              <div className="text-2xl font-bold">${parseFloat(user?.usdtBalance || '0').toFixed(2)}</div>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">USDT</p>
             </CardContent>
           </Card>
 
-          {/* Trade History */}
           <Card>
-            <CardHeader>
-              <CardTitle>交易记录</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
+                <TrendingUp className="inline mr-2" size={16} />
+                投资中
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {user.trades.map((trade) => (
-                  <div 
-                    key={trade.id}
-                    className="flex items-center gap-4 py-3 border-b border-[hsl(var(--border))] last:border-0"
-                  >
-                    <div className={cn(
-                      "w-2 h-2 rounded-full",
-                      trade.pnl >= 0 ? "bg-emerald-400" : "bg-red-400"
-                    )} />
-                    <div className="flex-1">
-                      <p className="font-medium">{trade.symbol}</p>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">{trade.time}</p>
-                    </div>
-                    <span className={cn(
-                      "px-2 py-1 rounded-lg text-xs font-medium",
-                      trade.action === 'buy' 
-                        ? "bg-emerald-400/10 text-emerald-400" 
-                        : "bg-red-400/10 text-red-400"
-                    )}>
-                      {trade.action === 'buy' ? '买入' : '卖出'}
-                    </span>
-                    <div className="text-right">
-                      <p className={cn(
-                        "font-bold",
-                        trade.pnl >= 0 ? "text-emerald-400" : "text-red-400"
-                      )}>
-                        {trade.pnl >= 0 ? '+' : ''}${Math.abs(trade.pnl)}
-                      </p>
-                      <p className={cn(
-                        "text-xs",
-                        trade.pnl >= 0 ? "text-emerald-400" : "text-red-400"
-                      )}>
-                        {trade.pnl >= 0 ? '+' : ''}{trade.pct}%
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-2xl font-bold">${totalInvested.toFixed(2)}</div>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                {positions.length} 个策略
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
+                <History className="inline mr-2" size={16} />
+                总盈亏
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)} USDT
               </div>
+              <p className={`text-xs mt-1 ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {totalPnl >= 0 ? '+' : ''}{totalPnlPct.toFixed(2)}%
+              </p>
             </CardContent>
           </Card>
         </div>
-      </main>
-    </>
+
+        {/* Positions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>跟单仓位</CardTitle>
+            <CardDescription>
+              您当前的跟单策略和仓位
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {positions.length === 0 ? (
+              <div className="text-center py-12">
+                <TrendingUp size={48} className="mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
+                <p className="text-[hsl(var(--muted-foreground))] mb-4">暂无跟单仓位</p>
+                <Button onClick={() => router.push('/invest')}>
+                  开始投资
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {positions.map((position) => (
+                  <Card key={position.id} className="bg-[hsl(var(--secondary))]">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">
+                          {position.strategyId === 'longtou' ? '龙头多头策略' : position.strategyId}
+                        </CardTitle>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          position.status === 'active' 
+                            ? 'bg-emerald-500/20 text-emerald-400' 
+                            : 'bg-yellow-500/20 text-yellow-400'
+                        }`}>
+                          {position.status === 'active' ? '活跃' : '暂停'}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <p className="text-[hsl(var(--muted-foreground))] mb-1">投入</p>
+                          <p className="font-medium">${parseFloat(position.invested).toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[hsl(var(--muted-foreground))] mb-1">当前</p>
+                          <p className="font-medium">${parseFloat(position.current).toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[hsl(var(--muted-foreground))] mb-1">盈亏</p>
+                          <p className={`font-medium ${parseFloat(position.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {parseFloat(position.pnl) >= 0 ? '+' : ''}{parseFloat(position.pnl).toFixed(2)} 
+                            <span className="text-xs ml-1">
+                              ({parseFloat(position.pnl) >= 0 ? '+' : ''}{position.pnlPct}%)
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {position.positions.length > 0 && (
+                        <div className="border-t border-[hsl(var(--border))] pt-4">
+                          <p className="text-sm text-[hsl(var(--muted-foreground))] mb-2">持仓详情</p>
+                          <div className="space-y-2">
+                            {position.positions.map((pos, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-sm bg-[hsl(var(--card))] p-2 rounded">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{pos.coin}</span>
+                                  <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                    pos.direction === 'LONG' 
+                                      ? 'bg-emerald-500/20 text-emerald-400' 
+                                      : 'bg-red-500/20 text-red-400'
+                                  }`}>
+                                    {pos.direction}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-medium">${pos.currentPrice.toFixed(2)}</p>
+                                  <p className={`text-xs ${pos.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {pos.pnl >= 0 ? '+' : ''}{pos.pnlPct.toFixed(2)}%
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

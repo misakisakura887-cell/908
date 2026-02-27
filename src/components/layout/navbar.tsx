@@ -8,6 +8,8 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { getNonce, walletLogin, signMessage, setToken, setUser, clearToken, getToken } from '@/lib/auth';
+import { toast } from 'sonner';
 
 const navLinks = [
   { href: '/invest', label: '跟单投资', icon: TrendingUp },
@@ -21,6 +23,8 @@ export function Navbar() {
   const { disconnect } = useDisconnect();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -28,8 +32,55 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // 检查是否已登录
+  useEffect(() => {
+    const token = getToken();
+    setIsLoggedIn(!!token);
+  }, []);
+
+  // 钱包连接后自动登录
+  useEffect(() => {
+    if (isConnected && address && !isLoggedIn && !isLoggingIn) {
+      handleWalletLogin(address);
+    }
+  }, [isConnected, address, isLoggedIn]);
+
+  const handleWalletLogin = async (walletAddress: string) => {
+    setIsLoggingIn(true);
+    try {
+      // 1. 获取 nonce
+      const message = await getNonce(walletAddress);
+      
+      // 2. 签名
+      const signature = await signMessage(message);
+      
+      // 3. 登录
+      const { token, user } = await walletLogin(walletAddress, message, signature);
+      
+      // 4. 存储 token 和用户信息
+      setToken(token);
+      setUser(user);
+      setIsLoggedIn(true);
+      
+      toast.success('登录成功！');
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('登录失败，请重试');
+      disconnect();
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   const handleConnect = () => {
     connect({ connector: injected() });
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    clearToken();
+    setIsLoggedIn(false);
+    toast.success('已断开连接');
   };
 
   return (
@@ -90,20 +141,25 @@ export function Navbar() {
               {/* Wallet Button */}
               {isConnected ? (
                 <div className="flex items-center gap-2">
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] rounded-xl">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-sm font-mono text-[hsl(var(--muted-foreground))]">
-                      {address?.slice(0, 6)}...{address?.slice(-4)}
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => disconnect()} className="text-red-400 hover:text-red-300">
+                  <Link href="/dashboard">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--secondary))]/80 transition-colors cursor-pointer">
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        isLoggedIn ? "bg-emerald-400 animate-pulse" : "bg-yellow-400 animate-pulse"
+                      )} />
+                      <span className="text-sm font-mono text-[hsl(var(--muted-foreground))]">
+                        {address?.slice(0, 6)}...{address?.slice(-4)}
+                      </span>
+                    </div>
+                  </Link>
+                  <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-red-400 hover:text-red-300">
                     断开
                   </Button>
                 </div>
               ) : (
-                <Button onClick={handleConnect} loading={isPending} size="sm">
+                <Button onClick={handleConnect} loading={isPending || isLoggingIn} size="sm">
                   <Wallet size={16} />
-                  <span className="hidden sm:inline">连接钱包</span>
+                  <span className="hidden sm:inline">{isLoggingIn ? '登录中...' : '连接钱包'}</span>
                 </Button>
               )}
 
