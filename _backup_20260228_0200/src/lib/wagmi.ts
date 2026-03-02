@@ -1,0 +1,17 @@
+import { createConfig, http } from 'wagmi';
+import { mainnet, arbitrum } from 'wagmi/chains';
+import { injected, walletConnect } from 'wagmi/connectors';
+
+export const config = createConfig({
+  chains: [mainnet, arbitrum],
+  connectors: [
+    injected(),
+    walletConnect({
+      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
+    }),
+  ],
+  transports: {
+    [mainnet.id]: http(),
+    [arbitrum.id]: http(),
+  },
+});
