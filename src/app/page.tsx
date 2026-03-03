@@ -145,13 +145,13 @@ function Navbar() {
           </Link>
           
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/invest" className="text-gray-400 hover:text-white transition-colors text-sm">跟单投资</Link>
+            <Link href="/trade" className="text-gray-400 hover:text-white transition-colors text-sm">跟单投资</Link>
             <Link href="/strategies" className="text-gray-400 hover:text-white transition-colors text-sm">策略广场</Link>
-            <Link href="/dashboard" className="text-gray-400 hover:text-white transition-colors text-sm">我的收益</Link>
+            <Link href="/portfolio" className="text-gray-400 hover:text-white transition-colors text-sm">我的资产</Link>
             <Link href="#docs" className="text-gray-400 hover:text-white transition-colors text-sm">文档</Link>
           </div>
           
-          <Link href="/ramp">
+          <Link href="/trade">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -212,7 +212,7 @@ function Hero() {
           
           {/* CTA Buttons */}
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link href="/invest">
+            <Link href="/trade">
               <motion.button
                 whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(0, 242, 254, 0.4)' }}
                 whileTap={{ scale: 0.98 }}
@@ -552,7 +552,7 @@ function CTA() {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.4 }}
             >
-              <Link href="/ramp">
+              <Link href="/trade">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
