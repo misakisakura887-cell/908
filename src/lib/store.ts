@@ -182,6 +182,99 @@ const mockStrategies: Strategy[] = [
       { id: '9', symbol: 'BTCUSDT', action: 'buy', time: '2026-02-23 14:00', pnl: -189, pct: -0.5 },
     ],
   },
+  // === 12种 AI 交易引擎 ===
+  {
+    id: 'trend_following', name: '📈 趋势追踪 AI', description: '利用深度学习 EMA 交叉识别大周期趋势，在单边行情中"吃掉"整段涨幅。采用快慢均线交叉 + ADX 趋势强度过滤虚假信号，自动设置移动止损保护利润。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 2, return7d: 11.5, return30d: 28.3, returnTotal: 132.7, sharpeRatio: 1.56, maxDrawdown: -8.5, winRate: 58, followers: 423, aum: 312000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(132.7), recentTrades: [
+      { id: 't1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 09:15', pnl: 780, pct: 2.3 },
+      { id: 't2', symbol: 'ETH', action: 'sell' as const, time: '2026-03-02 16:30', pnl: -120, pct: -0.4 },
+    ],
+  },
+  {
+    id: 'swing_trading', name: '🔄 波段震荡 AI', description: '基于布林带 + RSI 均值回归原理，AI 动态计算压力位与支撑位。适合在横盘或宽幅震荡市场中高抛低吸，回撤控制优秀。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 1, return7d: 5.8, return30d: 18.2, returnTotal: 78.5, sharpeRatio: 1.92, maxDrawdown: -4.2, winRate: 72, followers: 651, aum: 528000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(78.5), recentTrades: [
+      { id: 's1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 08:45', pnl: 340, pct: 1.1 },
+      { id: 's2', symbol: 'ETH', action: 'buy' as const, time: '2026-03-02 22:10', pnl: 210, pct: 0.7 },
+    ],
+  },
+  {
+    id: 'hft_scalping', name: '⚡ 极速高频 AI', description: '毫秒级下单，捕捉微小的买卖盘价差。依靠极高胜率和复利效应累积收益，受大盘跌宕影响极小。适合追求稳定日收益的投资者。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 2, return7d: 3.2, return30d: 14.8, returnTotal: 95.3, sharpeRatio: 2.85, maxDrawdown: -2.1, winRate: 89, followers: 287, aum: 198000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(95.3), recentTrades: [
+      { id: 'h1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 10:01', pnl: 45, pct: 0.08 },
+      { id: 'h2', symbol: 'ETH', action: 'sell' as const, time: '2026-03-03 09:58', pnl: 32, pct: 0.05 },
+    ],
+  },
+  {
+    id: 'arbitrage_hedge', name: '🛡️ 套利对冲 AI', description: '跨平台、跨品种套利（资金费率套利、BTC/ETH 比率套利）。追求极低回撤，是稳健型大资金投资者的首选。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 1, return7d: 1.8, return30d: 7.2, returnTotal: 42.1, sharpeRatio: 3.45, maxDrawdown: -1.3, winRate: 85, followers: 892, aum: 1250000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(42.1), recentTrades: [
+      { id: 'a1', symbol: 'BTC', action: 'sell' as const, time: '2026-03-03 08:00', pnl: 120, pct: 0.3 },
+      { id: 'a2', symbol: 'ETH', action: 'buy' as const, time: '2026-03-03 08:00', pnl: 95, pct: 0.25 },
+    ],
+  },
+  {
+    id: 'grid_martin', name: '📊 马丁/网格进化 AI', description: '传统网格策略的 AI 升级版。由智能算法动态调整网格密度和倍率，根据市场波动率自动扩缩网格范围，有效规避大趋势下的爆仓风险。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 2, return7d: 4.5, return30d: 16.7, returnTotal: 88.2, sharpeRatio: 1.67, maxDrawdown: -6.5, winRate: 75, followers: 378, aum: 289000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(88.2), recentTrades: [
+      { id: 'g1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 07:30', pnl: 85, pct: 0.3 },
+      { id: 'g2', symbol: 'BTC', action: 'sell' as const, time: '2026-03-03 07:25', pnl: 92, pct: 0.32 },
+    ],
+  },
+  {
+    id: 'rl_agent', name: '🤖 强化学习 Agent', description: '像 AlphaGo 一样自我博弈进化。采用 Q-Learning 算法，根据市场反馈实时调整交易动作（买入/卖出/持有），具备极强的环境适应性。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 2, return7d: 9.3, return30d: 25.1, returnTotal: 118.6, sharpeRatio: 1.43, maxDrawdown: -9.8, winRate: 61, followers: 156, aum: 145000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(118.6), recentTrades: [
+      { id: 'r1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 09:30', pnl: 560, pct: 1.8 },
+    ],
+  },
+  {
+    id: 'sentiment_nlp', name: '🧠 NLP 情绪分析', description: '实时抓取全网社交媒体、新闻、研报，通过 Fear & Greed Index 判断市场恐慌或贪婪程度，反向操作先人一步埋伏。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 3, return7d: 14.2, return30d: 32.8, returnTotal: 167.3, sharpeRatio: 1.21, maxDrawdown: -15.3, winRate: 55, followers: 234, aum: 178000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(167.3), recentTrades: [
+      { id: 'n1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 06:00', pnl: 1230, pct: 3.5 },
+    ],
+  },
+  {
+    id: 'multifactor_deep', name: '🔬 多因子深度挖掘 AI', description: '同时分析成交量、波动率、动量、ATR、价格位置等数千因子，通过综合评分模型找出人类肉眼无法察觉的隐秘关联。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 2, return7d: 7.6, return30d: 21.4, returnTotal: 103.2, sharpeRatio: 1.78, maxDrawdown: -7.2, winRate: 65, followers: 312, aum: 267000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(103.2), recentTrades: [
+      { id: 'm1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 10:15', pnl: 430, pct: 1.4 },
+      { id: 'm2', symbol: 'SOL', action: 'sell' as const, time: '2026-03-02 19:20', pnl: 210, pct: 0.9 },
+    ],
+  },
+  {
+    id: 'nsp_prediction', name: '🔮 神级预测模型 NSP', description: '利用 Next-State Prediction 范式，融合 5分钟、1小时、4小时三个时间框架的线性回归预测。三框架方向一致时信号最强，极高短线方向感。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 3, return7d: 18.5, return30d: 45.2, returnTotal: 215.8, sharpeRatio: 1.15, maxDrawdown: -18.5, winRate: 57, followers: 189, aum: 156000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(215.8), recentTrades: [
+      { id: 'p1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 09:45', pnl: 1560, pct: 4.2 },
+    ],
+  },
+  {
+    id: 'dca_conservative', name: '🛡️ 保本增值型', description: '年化 8-15%，最大回撤 < 2%。智能 DCA 定投策略，价格低于均线时自动加倍买入，高于均线时减半。适合大资金长期避险。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 1, return7d: 0.8, return30d: 3.5, returnTotal: 28.6, sharpeRatio: 3.12, maxDrawdown: -1.5, winRate: 78, followers: 1234, aum: 2340000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(28.6), recentTrades: [
+      { id: 'd1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 04:00', pnl: 45, pct: 0.15 },
+    ],
+  },
+  {
+    id: 'balanced_steady', name: '⚖️ 稳健平衡型', description: '年化 20-50%，最大回撤 < 10%。结合 MACD 金叉 + RSI 中性区进场，保守择时但收益稳定。主流用户的首选策略。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 2, return7d: 3.8, return30d: 12.5, returnTotal: 67.3, sharpeRatio: 2.15, maxDrawdown: -5.8, winRate: 68, followers: 756, aum: 890000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(67.3), recentTrades: [
+      { id: 'b1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 08:30', pnl: 290, pct: 0.95 },
+      { id: 'b2', symbol: 'ETH', action: 'sell' as const, time: '2026-03-02 20:15', pnl: 175, pct: 0.6 },
+    ],
+  },
+  {
+    id: 'aggressive_yolo', name: '🔥 激进暴利型', description: '年化 100%+，最大回撤 > 30%。高杠杆 + 动量突破策略，突破20期高点/低点且放量时全力进场。适合小资金搏杀高倍收益。',
+    type: 'btc_quant' as const, assetClass: 'crypto' as const, riskLevel: 3, return7d: 22.3, return30d: 58.7, returnTotal: 312.5, sharpeRatio: 0.89, maxDrawdown: -35.2, winRate: 48, followers: 98, aum: 67000, status: 'active' as const,
+    performanceHistory: generatePerformanceData(312.5), recentTrades: [
+      { id: 'y1', symbol: 'BTC', action: 'buy' as const, time: '2026-03-03 10:30', pnl: 3450, pct: 8.5 },
+      { id: 'y2', symbol: 'SOL', action: 'sell' as const, time: '2026-03-02 15:00', pnl: -890, pct: -3.2 },
+    ],
+  },
 ];
 
 function generatePerformanceData(totalReturn: number): { date: string; value: number }[] {
