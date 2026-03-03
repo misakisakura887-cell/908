@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getToken, getCurrentUser, getCopyPositions } from '@/lib/auth';
+import { getToken, getCurrentUser, getCopyPositions, setUser as saveUser } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, Wallet, History, Link as LinkIcon, AlertCircle } from 'lucide-react';
@@ -58,6 +58,7 @@ export default function DashboardPage() {
       // 获取当前用户信息
       const userData = await getCurrentUser();
       setUser(userData);
+      saveUser(userData); // 同步到 localStorage
 
       // 加载跟单仓位
       const positionsData = await getCopyPositions();

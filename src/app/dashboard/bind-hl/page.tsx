@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Shield, AlertCircle, Link as LinkIcon } from 'lucide-react';
-import { getToken } from '@/lib/auth';
+import { getToken, getUser, setUser } from '@/lib/auth';
 import { toast } from 'sonner';
 
 export default function BindHLPage() {
@@ -53,6 +53,11 @@ export default function BindHLPage() {
       });
 
       if (response.ok) {
+        // 更新 localStorage 中的 user 信息
+        const currentUser = getUser();
+        if (currentUser) {
+          setUser({ ...currentUser, hlAddress: hlAddress.toLowerCase() });
+        }
         toast.success('绑定 Hyperliquid 成功！');
         router.push('/dashboard');
       } else {

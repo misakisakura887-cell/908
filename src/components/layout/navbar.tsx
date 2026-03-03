@@ -136,10 +136,10 @@ export function Navbar() {
             {/* Right Buttons */}
             <div className="flex items-center gap-2 sm:gap-3">
               {isLoggedIn && (
-                <Link href="/ramp">
+                <Link href="/deposit">
                   <Button variant="secondary" size="sm" className="border border-[hsl(var(--border))]">
                     <ArrowDownToLine size={16} />
-                    <span className="hidden sm:inline">存入</span>
+                    <span className="hidden sm:inline">充值</span>
                   </Button>
                 </Link>
               )}
