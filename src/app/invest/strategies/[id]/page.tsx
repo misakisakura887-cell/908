@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, ArrowLeft, Wallet, AlertCircle } from 'lucide-react';
+import { TrendingUp, ArrowLeft, Wallet, AlertCircle, RefreshCw } from 'lucide-react';
 import { getToken } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -39,6 +39,8 @@ export default function StrategyDetailPage() {
   const [longtouData, setLongtouData] = useState<LongtouData | null>(null);
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (strategyId === 'longtou') {
@@ -54,12 +56,14 @@ export default function StrategyDetailPage() {
       if (response.ok) {
         const data = await response.json();
         setLongtouData(data);
+        setLastUpdated(new Date());
       }
     } catch (error) {
       console.error('Failed to load positions:', error);
       toast.error('加载仓位失败');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -187,7 +191,7 @@ export default function StrategyDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xl font-bold">${longtouData?.accountValue.toFixed(2)}</p>
+                  <p className="text-xl font-bold">${(longtouData?.accountValue ?? 0).toFixed(2)}</p>
                 </CardContent>
               </Card>
               
@@ -198,7 +202,7 @@ export default function StrategyDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xl font-bold">${longtouData?.totalValue.toFixed(2)}</p>
+                  <p className="text-xl font-bold">${(longtouData?.totalValue ?? 0).toFixed(2)}</p>
                 </CardContent>
               </Card>
               
@@ -209,7 +213,7 @@ export default function StrategyDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xl font-bold">${longtouData?.marginUsed.toFixed(2)}</p>
+                  <p className="text-xl font-bold">${(longtouData?.marginUsed ?? 0).toFixed(2)}</p>
                 </CardContent>
               </Card>
               
@@ -233,16 +237,35 @@ export default function StrategyDetailPage() {
             {/* Positions */}
             <Card>
               <CardHeader>
-                <CardTitle>当前仓位</CardTitle>
-                <CardDescription>
-                  金明老师的 Hyperliquid 实时仓位
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>当前仓位</CardTitle>
+                    <CardDescription>
+                      金明老师的 Hyperliquid 实时仓位
+                      {lastUpdated && (
+                        <span className="ml-2 text-xs">
+                          · 更新于 {lastUpdated.toLocaleTimeString('zh-CN')}
+                        </span>
+                      )}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setRefreshing(true); loadLongtouPositions(); }}
+                    disabled={refreshing}
+                  >
+                    <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                    刷新
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {!longtouData || longtouData.positions.length === 0 ? (
                   <div className="text-center py-12">
                     <Wallet size={48} className="mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
-                    <p className="text-[hsl(var(--muted-foreground))]">暂无持仓</p>
+                    <p className="text-[hsl(var(--muted-foreground))] mb-2">金明老师当前暂无开仓</p>
+                    <p className="text-xs text-[hsl(var(--muted-foreground))] mb-4">请稍后点击刷新查看最新持仓</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -325,7 +348,7 @@ export default function StrategyDetailPage() {
                 <div className="p-3 bg-[hsl(var(--secondary))] rounded-lg space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-[hsl(var(--muted-foreground))]">策略总仓位</span>
-                    <span className="font-medium">${longtouData?.totalValue.toFixed(2)}</span>
+                    <span className="font-medium">${(longtouData?.totalValue ?? 0).toFixed(2)}</span>
                   </div>
                   {amount && parseFloat(amount) > 0 && longtouData && longtouData.totalValue > 0 && (
                     <div className="flex justify-between">

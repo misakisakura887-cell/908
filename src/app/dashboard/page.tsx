@@ -191,9 +191,15 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/bind-hl')}>
-                  更换钱包
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={() => router.push('/invest/strategies/longtou')}>
+                    <TrendingUp size={14} className="mr-1" />
+                    前往跟单
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/bind-hl')}>
+                    更换钱包
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -212,8 +218,8 @@ export default function DashboardPage() {
               <div className="text-center py-12">
                 <TrendingUp size={48} className="mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
                 <p className="text-[hsl(var(--muted-foreground))] mb-4">暂无跟单仓位</p>
-                <Button onClick={() => router.push('/invest')}>
-                  开始投资
+                <Button onClick={() => router.push('/invest/strategies/longtou')}>
+                  开始跟单龙头策略
                 </Button>
               </div>
             ) : (

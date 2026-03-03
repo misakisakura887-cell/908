@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Wallet, Menu, X, TrendingUp, ArrowDownToLine, LayoutDashboard, User } from 'lucide-react';
 import { useAccount, useConnect, useDisconnect, useSignMessage } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { getNonce, walletLogin, setToken, setUser, clearToken, getToken, getUser } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -25,8 +25,9 @@ export function Navbar() {
   const { signMessageAsync } = useSignMessage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => typeof window !== 'undefined' && !!localStorage.getItem('mirror_token'));
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const hasTriedLogin = useRef(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -34,13 +35,10 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // 钱包连接后自动触发登录（仅触发一次）
   useEffect(() => {
-    setIsLoggedIn(!!getToken());
-  }, []);
-
-  // 钱包连接后自动触发登录
-  useEffect(() => {
-    if (isConnected && address && !isLoggedIn && !isLoggingIn) {
+    if (isConnected && address && !isLoggedIn && !isLoggingIn && !hasTriedLogin.current) {
+      hasTriedLogin.current = true;
       handleWalletLogin(address);
     }
   }, [isConnected, address]);
@@ -71,7 +69,7 @@ export function Navbar() {
       } else {
         toast.error('登录失败: ' + (error?.message || '未知错误'));
       }
-      disconnect();
+      // 不 disconnect，让用户可以重试
     } finally {
       setIsLoggingIn(false);
     }
