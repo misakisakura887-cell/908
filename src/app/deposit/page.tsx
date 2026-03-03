@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Copy, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
-import { getToken, getUser, getCurrentUser, setUser as saveUser } from '@/lib/auth';
+import { ArrowLeft, Copy, CheckCircle, AlertCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { getToken, getCurrentUser, setUser as saveUser } from '@/lib/auth';
 import { toast } from 'sonner';
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
-import { parseUnits, encodeFunctionData } from 'viem';
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain, useReadContract } from 'wagmi';
+import { parseUnits, formatUnits, encodeFunctionData, erc20Abi } from 'viem';
 
 // 平台收款地址 (冷钱包)
 const PLATFORM_WALLET = '0x12fb87606b61bbF1b886262f4215e0ba52ba2F5E';
@@ -22,7 +22,7 @@ const NETWORKS = [
     id: 'arbitrum',
     name: 'Arbitrum One',
     chainId: 42161,
-    usdt: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+    usdt: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' as `0x${string}`,
     decimals: 6,
     icon: '🔵',
     explorer: 'https://arbiscan.io/tx/',
@@ -33,7 +33,7 @@ const NETWORKS = [
     id: 'bsc',
     name: 'BNB Chain',
     chainId: 56,
-    usdt: '0x55d398326f99059fF775485246999027B3197955',
+    usdt: '0x55d398326f99059fF775485246999027B3197955' as `0x${string}`,
     decimals: 18,
     icon: '🟡',
     explorer: 'https://bscscan.com/tx/',
@@ -41,19 +41,6 @@ const NETWORKS = [
     time: '~15秒',
   },
 ];
-
-// ERC20 transfer ABI
-const ERC20_ABI = [
-  {
-    name: 'transfer',
-    type: 'function',
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    outputs: [{ name: '', type: 'bool' }],
-  },
-] as const;
 
 export default function DepositPage() {
   const router = useRouter();
@@ -63,13 +50,30 @@ export default function DepositPage() {
   const [step, setStep] = useState<'input' | 'confirm' | 'pending' | 'done'>('input');
   const [copied, setCopied] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [isSwitching, setIsSwitching] = useState(false);
   const token = getToken();
 
+  const { switchChain } = useSwitchChain();
   const { sendTransaction, isPending: isSending, data: sendData } = useSendTransaction();
-  
+
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: sendData,
   });
+
+  // 读取用户在选定网络上的 USDT 余额
+  const { data: usdtBalance, refetch: refetchBalance } = useReadContract({
+    address: selectedNetwork.usdt as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: [address!],
+    chainId: selectedNetwork.chainId,
+    query: { enabled: !!address },
+  });
+
+  const formattedBalance = usdtBalance ? formatUnits(usdtBalance as bigint, selectedNetwork.decimals) : '0';
+  const walletBalance = usdtBalance !== undefined ? parseFloat(formattedBalance) : null;
+  const isInsufficientBalance = walletBalance !== null && !!amount && parseFloat(amount) > parseFloat(formattedBalance);
+  const isWrongChain = isConnected && chain?.id !== selectedNetwork.chainId;
 
   // 交易确认后通知后端
   useEffect(() => {
@@ -97,12 +101,28 @@ export default function DepositPage() {
       });
       if (response.ok) {
         toast.success('充值已提交，正在确认中...');
-        // 刷新余额
         const userData = await getCurrentUser();
         saveUser(userData);
       }
     } catch (err) {
       console.error('Notify deposit failed:', err);
+    }
+  };
+
+  const handleNetworkSelect = async (net: typeof NETWORKS[0]) => {
+    setSelectedNetwork(net);
+    if (isConnected && chain?.id !== net.chainId) {
+      setIsSwitching(true);
+      try {
+        await switchChain({ chainId: net.chainId });
+        toast.success(`已切换到 ${net.name}`);
+      } catch (err: any) {
+        if (!err?.message?.includes('rejected')) {
+          toast.error(`切换网络失败: ${err?.message || '请手动切换'}`);
+        }
+      } finally {
+        setIsSwitching(false);
+      }
     }
   };
 
@@ -115,24 +135,24 @@ export default function DepositPage() {
       toast.error('请先连接钱包');
       return;
     }
-    if (chain?.id !== selectedNetwork.chainId) {
-      toast.error(`请在钱包中切换到 ${selectedNetwork.name} 网络`);
+    if (isInsufficientBalance) {
+      toast.error('USDT 余额不足');
       return;
     }
 
     try {
       const amountInWei = parseUnits(amount, selectedNetwork.decimals);
       const data = encodeFunctionData({
-        abi: ERC20_ABI,
+        abi: erc20Abi,
         functionName: 'transfer',
         args: [PLATFORM_WALLET as `0x${string}`, amountInWei],
       });
 
       sendTransaction({
-        to: selectedNetwork.usdt as `0x${string}`,
+        to: selectedNetwork.usdt,
         data,
       });
-      
+
       setStep('pending');
     } catch (err: any) {
       console.error('Deposit error:', err);
@@ -149,6 +169,7 @@ export default function DepositPage() {
 
   const quickAmounts = [10, 50, 100, 500, 1000];
 
+
   if (!token) {
     return (
       <div className="min-h-screen bg-[#040405]">
@@ -163,7 +184,7 @@ export default function DepositPage() {
   return (
     <div className="min-h-screen bg-[#040405]">
       <Navbar />
-      
+
       <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-24 pb-12">
         <Button variant="ghost" onClick={() => router.back()} className="mb-4">
           <ArrowLeft size={16} className="mr-2" />
@@ -176,23 +197,27 @@ export default function DepositPage() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-base">选择网络</CardTitle>
-            <CardDescription>选择 USDT 所在的区块链网络</CardDescription>
+            <CardDescription>选择 USDT 所在的区块链网络，将自动切换钱包网络</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
               {NETWORKS.map((net) => (
                 <button
                   key={net.id}
-                  onClick={() => setSelectedNetwork(net)}
+                  onClick={() => handleNetworkSelect(net)}
+                  disabled={isSwitching}
                   className={`p-4 rounded-xl border text-left transition-all ${
                     selectedNetwork.id === net.id
                       ? 'border-cyan-500 bg-cyan-500/10'
                       : 'border-[hsl(var(--border))] hover:border-cyan-500/50'
-                  }`}
+                  } ${isSwitching ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{net.icon}</span>
-                    <span className="font-medium">{net.name}</span>
+                    <span className="font-medium text-sm">{net.name}</span>
+                    {isSwitching && selectedNetwork.id === net.id && (
+                      <Loader2 size={12} className="animate-spin text-cyan-400" />
+                    )}
                   </div>
                   <div className="text-xs text-[hsl(var(--muted-foreground))] space-y-1">
                     <p>Gas 费: {net.fee}</p>
@@ -201,6 +226,22 @@ export default function DepositPage() {
                 </button>
               ))}
             </div>
+
+            {/* 链不匹配提示 */}
+            {isWrongChain && !isSwitching && (
+              <div className="mt-3 flex items-center gap-2 p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                <AlertCircle size={14} className="text-orange-400 flex-shrink-0" />
+                <p className="text-xs text-orange-400 flex-1">
+                  当前网络不匹配，点击网络卡片自动切换
+                </p>
+                <button
+                  onClick={() => handleNetworkSelect(selectedNetwork)}
+                  className="text-xs text-orange-400 underline"
+                >
+                  立即切换
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -211,16 +252,45 @@ export default function DepositPage() {
               <CardDescription>输入 USDT 充值金额（{selectedNetwork.name}）</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* 钱包余额显示 */}
+              <div className="flex items-center justify-between p-3 bg-[hsl(var(--secondary))] rounded-lg">
+                <span className="text-sm text-[hsl(var(--muted-foreground))]">钱包 USDT 余额</span>
+                <span className="text-sm font-medium">
+                  {usdtBalance !== undefined ? (
+                    <span className={isInsufficientBalance ? 'text-red-400' : 'text-cyan-400'}>
+                      {formattedBalance} USDT
+                    </span>
+                  ) : address ? (
+                    <Loader2 size={14} className="animate-spin inline" />
+                  ) : (
+                    <span className="text-[hsl(var(--muted-foreground))]">-- USDT</span>
+                  )}
+                </span>
+              </div>
+
               <div>
                 <Label htmlFor="amount">金额 (USDT)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="100"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="mt-2 text-lg"
-                />
+                <div className="relative mt-2">
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="100"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className={`text-lg pr-16 ${isInsufficientBalance ? 'border-red-500/50' : ''}`}
+                  />
+                  {walletBalance !== null && (
+                    <button
+                      onClick={() => setAmount(walletBalance.toFixed(selectedNetwork.decimals === 6 ? 2 : 4))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-cyan-400 hover:text-cyan-300"
+                    >
+                      MAX
+                    </button>
+                  )}
+                </div>
+                {isInsufficientBalance && (
+                  <p className="text-xs text-red-400 mt-1">余额不足，当前余额 {walletBalance?.toFixed(2)} USDT</p>
+                )}
               </div>
 
               {/* 快捷金额 */}
@@ -245,7 +315,7 @@ export default function DepositPage() {
                 <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">平台收款地址</p>
                 <div className="flex items-center gap-2">
                   <code className="text-sm font-mono text-cyan-400 break-all flex-1">{PLATFORM_WALLET}</code>
-                  <button onClick={copyAddress} className="p-2 hover:bg-[hsl(var(--border))] rounded-lg transition-colors">
+                  <button onClick={copyAddress} className="p-2 hover:bg-[hsl(var(--border))] rounded-lg transition-colors flex-shrink-0">
                     {copied ? <CheckCircle size={16} className="text-emerald-400" /> : <Copy size={16} />}
                   </button>
                 </div>
@@ -265,11 +335,19 @@ export default function DepositPage() {
 
               <Button
                 onClick={handleDeposit}
-                disabled={!amount || parseFloat(amount) <= 0 || isSending}
+                disabled={!amount || parseFloat(amount) <= 0 || isSending || isInsufficientBalance || isSwitching}
                 className="w-full"
                 size="lg"
               >
-                {isSending ? '请在钱包中确认...' : `充值 ${amount || '0'} USDT`}
+                {isSwitching ? (
+                  <><Loader2 size={16} className="mr-2 animate-spin" />切换网络中...</>
+                ) : isSending ? (
+                  '请在钱包中确认...'
+                ) : isInsufficientBalance ? (
+                  '余额不足'
+                ) : (
+                  `充值 ${amount || '0'} USDT`
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -310,7 +388,7 @@ export default function DepositPage() {
                 <Button variant="secondary" onClick={() => { setStep('input'); setAmount(''); }} className="flex-1">
                   继续充值
                 </Button>
-                <Button onClick={() => router.push('/invest/strategies/longtou')} className="flex-1">
+                <Button onClick={() => router.push('/trade')} className="flex-1">
                   开始跟单
                 </Button>
               </div>

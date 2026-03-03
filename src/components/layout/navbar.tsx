@@ -12,8 +12,9 @@ import { getNonce, walletLogin, setToken, setUser, clearToken, getToken, getUser
 import { toast } from 'sonner';
 
 const navLinks = [
-  { href: '/invest', label: '跟单投资', icon: TrendingUp },
-  { href: '/dashboard', label: '我的面板', icon: LayoutDashboard, authRequired: true },
+  { href: '/trade', label: '交易', icon: TrendingUp },
+  { href: '/portfolio', label: '资产', icon: Wallet, authRequired: true },
+  { href: '/deposit', label: '充值', icon: ArrowDownToLine, authRequired: true },
 ];
 
 export function Navbar() {
@@ -135,15 +136,6 @@ export function Navbar() {
 
             {/* Right Buttons */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {isLoggedIn && (
-                <Link href="/deposit">
-                  <Button variant="secondary" size="sm" className="border border-[hsl(var(--border))]">
-                    <ArrowDownToLine size={16} />
-                    <span className="hidden sm:inline">充值</span>
-                  </Button>
-                </Link>
-              )}
-
               {isConnected && isLoggedIn ? (
                 <div className="flex items-center gap-2">
                   <Link href="/dashboard">
