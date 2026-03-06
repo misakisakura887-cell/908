@@ -68,10 +68,13 @@ export default function PortfolioPage() {
   }
 
   const balance = parseFloat(user?.usdtBalance || '0');
+  const hlAccountValue = parseFloat((user as any)?.hlBalance?.accountValue || '0');
+  const hlWithdrawable = parseFloat((user as any)?.hlBalance?.withdrawable || '0');
+  const hlPositions = (user as any)?.hlPositions || [];
   const totalInvested = positions.reduce((s, p) => s + parseFloat(p.invested || '0'), 0);
   const totalCurrent = positions.reduce((s, p) => s + parseFloat(p.current || '0'), 0);
   const totalPnl = totalCurrent - totalInvested;
-  const totalAssets = balance + totalCurrent;
+  const totalAssets = balance + hlAccountValue;
 
   return (
     <div className="min-h-screen bg-[#040405]">
@@ -123,8 +126,8 @@ export default function PortfolioPage() {
             {/* Asset Breakdown */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: '可用余额', value: `$${balance.toFixed(2)}`, sub: 'USDT', color: '' },
-                { label: '跟单中', value: `$${totalInvested.toFixed(2)}`, sub: `${positions.length} 个策略`, color: '' },
+                { label: 'HL 账户价值', value: `$${hlAccountValue.toFixed(2)}`, sub: `可用: $${hlWithdrawable.toFixed(2)}`, color: '' },
+                { label: 'HL 持仓数', value: `${hlPositions.length}`, sub: hlPositions.length > 0 ? hlPositions.map((p: any) => p.coin).join(', ') : '暂无持仓', color: '' },
                 { label: '总盈亏', value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`, sub: totalInvested > 0 ? `${((totalPnl / totalInvested) * 100).toFixed(2)}%` : '—', color: totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400' },
               ].map((item, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }}>
