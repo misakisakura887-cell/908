@@ -4,23 +4,36 @@ import { use, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Navbar } from '@/components/layout/navbar';
 import { PerformanceChart } from '@/components/charts/performance-chart';
 import { useStore } from '@/lib/store';
+import { getToken, getUser, setUser as saveUser, getCurrentUser } from '@/lib/auth';
+import { toast } from 'sonner';
 
 import { 
   TrendingUp, Shield, Activity, Users, ArrowUpRight, ArrowDownRight, 
-  ChevronLeft, AlertCircle, CheckCircle2, Info
+  ChevronLeft, AlertCircle, CheckCircle2, Info, Key, X, Loader2, ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function StrategyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getStrategyById, investAmount, setInvestAmount, invest, isInvesting, user } = useStore();
+  const { getStrategyById, investAmount, setInvestAmount, user } = useStore();
   
   const strategy = getStrategyById(id);
   const [investSuccess, setInvestSuccess] = useState(false);
+  const [isInvesting, setIsInvesting] = useState(false);
+  
+  // HL 绑定弹窗状态
+  const [showHLModal, setShowHLModal] = useState(false);
+  const [hlAddress, setHlAddress] = useState('');
+  const [hlPrivateKey, setHlPrivateKey] = useState('');
+  const [hlBinding, setHlBinding] = useState(false);
+  const [hlVerified, setHlVerified] = useState(false);
+  const [pendingAmount, setPendingAmount] = useState(0);
 
   if (!strategy) {
     return (
@@ -43,12 +56,88 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const handleInvest = async () => {
-    if ( investAmount <= 0) return;
-    const success = await invest(strategy.id, investAmount);
-    if (success) {
-      setInvestSuccess(true);
-      setTimeout(() => setInvestSuccess(false), 3000);
+    if (investAmount <= 0) return;
+    const token = getToken();
+    if (!token) { toast.error('请先连接钱包'); return; }
+
+    setIsInvesting(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/copytrade/follow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ strategyId: strategy.id, amount: investAmount }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setInvestSuccess(true);
+        toast.success('跟单成功！仓位将按策略比例自动同步到您的 HL 账户');
+      } else if (data.error === 'NEED_HL_BINDING') {
+        // 未绑定 HL API Key → 弹出绑定弹窗
+        setPendingAmount(investAmount);
+        setShowHLModal(true);
+        setHlVerified(false);
+      } else if (data.error?.startsWith('HL_VERIFY_FAILED')) {
+        toast.error('HL API Key 验证失败，请重新绑定');
+        setPendingAmount(investAmount);
+        setShowHLModal(true);
+        setHlVerified(false);
+      } else {
+        toast.error(data.error || '投资失败');
+      }
+    } catch { toast.error('网络错误'); }
+    finally { setIsInvesting(false); }
+  };
+
+  // 绑定 HL API Key + 验证 + 自动投资
+  const handleHLBind = async () => {
+    if (!hlAddress || !hlAddress.startsWith('0x') || hlAddress.length !== 42) {
+      toast.error('请输入有效的 HL 钱包地址'); return;
     }
+    if (!hlPrivateKey || !hlPrivateKey.startsWith('0x')) {
+      toast.error('请输入有效的 HL API Private Key'); return;
+    }
+    const token = getToken();
+    if (!token) { toast.error('请先登录'); return; }
+
+    setHlBinding(true);
+    try {
+      // Step 1: 绑定 HL API Key
+      const bindRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/bindhl`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ hlAddress, hlPrivateKey }),
+      });
+      if (!bindRes.ok) {
+        const err = await bindRes.json();
+        toast.error(err.error || '绑定失败'); setHlBinding(false); return;
+      }
+
+      // 更新本地用户信息
+      const currentUser = getUser();
+      if (currentUser) saveUser({ ...currentUser, hlAddress: hlAddress.toLowerCase() });
+
+      setHlVerified(true);
+      toast.success('✅ HL API Key 绑定成功，正在投资...');
+
+      // Step 2: 自动重新投资
+      if (pendingAmount > 0) {
+        const followRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/copytrade/follow`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ strategyId: strategy.id, amount: pendingAmount }),
+        });
+        const followData = await followRes.json();
+        if (followRes.ok) {
+          toast.success(`🎉 投资成功！$${pendingAmount} 已按策略仓位比例同步到您的 HL 账户`);
+          setInvestSuccess(true);
+          setTimeout(() => setShowHLModal(false), 2000);
+        } else {
+          toast.error(followData.error || '投资失败，请稍后重试');
+        }
+      }
+    } catch { toast.error('操作失败'); }
+    finally { setHlBinding(false); }
   };
 
   const fee = investAmount * 0.005;
@@ -291,8 +380,8 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ id: s
                   </div>
 
                   <div className="flex justify-between text-sm">
-                    <span className="text-[hsl(var(--muted-foreground))]">手续费 (0.5%)</span>
-                    <span className="text-cyan-400 font-mono">≈ ${fee.toFixed(2)} USDT</span>
+                    <span className="text-[hsl(var(--muted-foreground))]">手续费</span>
+                    <span className="text-emerald-400 font-mono">$0（零手续费）</span>
                   </div>
 
                   {investSuccess ? (
@@ -349,6 +438,111 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
       </main>
+
+      {/* HL API Key 绑定弹窗 */}
+      <AnimatePresence>
+        {showHLModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowHLModal(false); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-lg"
+            >
+              <Card className="bg-[#0a0a0b] border-cyan-500/30">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Key size={20} className="text-cyan-400" />
+                      连接 Hyperliquid API
+                    </CardTitle>
+                    <button onClick={() => setShowHLModal(false)} className="text-[hsl(var(--muted-foreground))] hover:text-white">
+                      <X size={18} />
+                    </button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {hlVerified ? (
+                    <div className="text-center py-8">
+                      <CheckCircle2 size={48} className="mx-auto mb-4 text-emerald-400" />
+                      <h3 className="text-lg font-bold text-emerald-400 mb-2">连接成功！</h3>
+                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                        ${pendingAmount} USDT 正在按策略仓位配比投入...
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Tips: 如何获取 HL API */}
+                      <div className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
+                        <h4 className="text-sm font-bold text-cyan-400 mb-2">📋 如何获取 Hyperliquid API Key</h4>
+                        <ol className="text-xs text-[hsl(var(--muted-foreground))] space-y-2 list-decimal list-inside">
+                          <li>打开 <a href="https://app.hyperliquid.xyz/API" target="_blank" rel="noopener" className="text-cyan-400 underline inline-flex items-center gap-0.5">app.hyperliquid.xyz/API <ExternalLink size={10} /></a></li>
+                          <li>连接你的钱包并登录</li>
+                          <li>点击 <span className="text-white font-medium">"Create API Key"</span></li>
+                          <li>设置权限为 <span className="text-white font-medium">"Trade"</span>（需要交易权限）</li>
+                          <li>复制生成的 <span className="text-white font-medium">Wallet Address</span> 和 <span className="text-white font-medium">API Private Key</span></li>
+                          <li>粘贴到下方输入框中</li>
+                        </ol>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm">API Wallet Address</Label>
+                        <Input
+                          placeholder="0x..."
+                          value={hlAddress}
+                          onChange={e => setHlAddress(e.target.value)}
+                          className="mt-1 font-mono text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-sm">API Private Key</Label>
+                        <Input
+                          type="password"
+                          placeholder="0x..."
+                          value={hlPrivateKey}
+                          onChange={e => setHlPrivateKey(e.target.value)}
+                          className="mt-1 font-mono text-sm"
+                        />
+                        <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                          🔒 使用 AES-256 加密存储，仅用于同步策略交易
+                        </p>
+                      </div>
+
+                      <div className="p-3 bg-[hsl(var(--secondary))]/50 rounded-xl text-xs space-y-1.5">
+                        <h5 className="font-medium text-[hsl(var(--foreground))]">连接后系统将：</h5>
+                        <div className="text-[hsl(var(--muted-foreground))] space-y-1">
+                          <p>1. ✅ 验证 API Key 连通性</p>
+                          <p>2. 💰 将 ${pendingAmount} USDT 按策略仓位配比投入</p>
+                          <p>3. 📊 同步策略的持仓和挂单到您的 HL 账户</p>
+                          <p>4. 🔄 后续策略变动将自动等比同步</p>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={handleHLBind}
+                        disabled={hlBinding || !hlAddress || !hlPrivateKey}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {hlBinding ? (
+                          <><Loader2 size={16} className="mr-2 animate-spin" /> 连接验证中...</>
+                        ) : (
+                          <><Key size={16} className="mr-2" /> 连接 API 并投资 ${pendingAmount}</>
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
