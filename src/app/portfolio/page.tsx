@@ -29,10 +29,18 @@ interface CopyTradePosition {
   positions: any[];
 }
 
+interface HLBalance {
+  perps: { accountValue: number; withdrawable: number; positions: any[] };
+  spot: { usdcTotal: number; usdcAvailable: number; positions: any[] };
+  totalValue: number;
+  totalAvailable: number;
+}
+
 export default function PortfolioPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [positions, setPositions] = useState<CopyTradePosition[]>([]);
+  const [hlBalance, setHlBalance] = useState<HLBalance | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,10 +54,18 @@ export default function PortfolioPage() {
       const userData = await getCurrentUser();
       setUser(userData);
       saveUser(userData);
-      try {
-        const pos = await getCopyPositions();
-        setPositions(Array.isArray(pos) ? pos : []);
-      } catch { setPositions([]); }
+      
+      const token = getToken();
+      // 并行加载跟单仓位 + HL 余额
+      const [posResult, hlResult] = await Promise.allSettled([
+        getCopyPositions(),
+        userData?.hlAddress ? fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/hl-balance`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        }).then(r => r.ok ? r.json() : null) : Promise.resolve(null),
+      ]);
+      
+      setPositions(posResult.status === 'fulfilled' && Array.isArray(posResult.value) ? posResult.value : []);
+      setHlBalance(hlResult.status === 'fulfilled' ? hlResult.value : null);
     } catch (err) {
       console.error(err);
       toast.error('加载失败');
@@ -68,13 +84,16 @@ export default function PortfolioPage() {
   }
 
   const balance = parseFloat(user?.usdtBalance || '0');
-  const hlAccountValue = parseFloat((user as any)?.hlBalance?.accountValue || '0');
-  const hlWithdrawable = parseFloat((user as any)?.hlBalance?.withdrawable || '0');
-  const hlPositions = (user as any)?.hlPositions || [];
+  const hlAccountValue = hlBalance?.totalValue || 0;
+  const hlWithdrawable = hlBalance?.totalAvailable || 0;
+  const hlSpotUSDC = hlBalance?.spot?.usdcTotal || 0;
+  const hlPerpsValue = hlBalance?.perps?.accountValue || 0;
+  const hlSpotPositions = hlBalance?.spot?.positions || [];
   const totalInvested = positions.reduce((s, p) => s + parseFloat(p.invested || '0'), 0);
   const totalCurrent = positions.reduce((s, p) => s + parseFloat(p.current || '0'), 0);
   const totalPnl = totalCurrent - totalInvested;
-  const totalAssets = balance + hlAccountValue;
+  // 总资产 = 平台余额 + HL 账户总值 + 跟单持仓价值
+  const totalAssets = balance + hlAccountValue + totalCurrent;
 
   return (
     <div className="min-h-screen bg-[#040405]">
@@ -126,8 +145,8 @@ export default function PortfolioPage() {
             {/* Asset Breakdown */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'HL 账户价值', value: `$${hlAccountValue.toFixed(2)}`, sub: `可用: $${hlWithdrawable.toFixed(2)}`, color: '' },
-                { label: 'HL 持仓数', value: `${hlPositions.length}`, sub: hlPositions.length > 0 ? hlPositions.map((p: any) => p.coin).join(', ') : '暂无持仓', color: '' },
+                { label: 'HL 账户价值', value: `$${hlAccountValue.toFixed(2)}`, sub: `Perps: $${hlPerpsValue.toFixed(2)} | Spot: $${hlSpotUSDC.toFixed(2)}`, color: '' },
+                { label: '跟单持仓', value: `$${totalCurrent.toFixed(2)}`, sub: totalInvested > 0 ? `投入: $${totalInvested.toFixed(2)}` : '暂无跟单', color: '' },
                 { label: '总盈亏', value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`, sub: totalInvested > 0 ? `${((totalPnl / totalInvested) * 100).toFixed(2)}%` : '—', color: totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400' },
               ].map((item, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }}>
