@@ -92,8 +92,8 @@ export default function PortfolioPage() {
   const totalInvested = positions.reduce((s, p) => s + parseFloat(p.invested || '0'), 0);
   const totalCurrent = positions.reduce((s, p) => s + parseFloat(p.current || '0'), 0);
   const totalPnl = totalCurrent - totalInvested;
-  // 总资产 = 平台余额 + HL 账户总值 + 跟单持仓价值
-  const totalAssets = balance + hlAccountValue + totalCurrent;
+  // 总资产 = HL 账户总值（所有交易都在 HL 上执行，不重复计算）
+  const totalAssets = hlAccountValue;
 
   return (
     <div className="min-h-screen bg-[#040405]">
