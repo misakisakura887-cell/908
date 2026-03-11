@@ -29,6 +29,8 @@ export function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => typeof window !== 'undefined' && !!localStorage.getItem('mirror_token'));
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const hasTriedLogin = useRef(false);
+  const savedUser = typeof window !== 'undefined' ? getUser() : null;
+  const displayAddress = address || savedUser?.walletAddress;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -136,18 +138,18 @@ export function Navbar() {
 
             {/* Right Buttons */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {isConnected && isLoggedIn ? (
+              {isLoggedIn && displayAddress ? (
                 <div className="flex items-center gap-2">
-                  <Link href="/dashboard">
+                  <Link href="/portfolio">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] rounded-xl cursor-pointer hover:border-cyan-500/50 transition-colors">
-                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-yellow-400'}`} />
                       <span className="text-sm font-mono text-[hsl(var(--muted-foreground))]">
-                        {address?.slice(0, 6)}...{address?.slice(-4)}
+                        {displayAddress?.slice(0, 6)}...{displayAddress?.slice(-4)}
                       </span>
                     </div>
                   </Link>
                   <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-red-400 hover:text-red-300">
-                    断开
+                    退出
                   </Button>
                 </div>
               ) : (
