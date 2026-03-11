@@ -36,7 +36,10 @@ const ALLOWED_ORIGINS = [
   'http://192.168.2.108:3001',
   'http://192.168.2.108:5173',
   'http://192.168.2.156:3000',
-  // 生产环境添加真实域名
+  // Vercel production
+  'https://908-eight.vercel.app',
+  'https://908-d1634h2lt-misakisakuras-projects-fd47d02c.vercel.app',
+  // 允许所有 vercel.app 子域名
   ...(process.env.ALLOWED_ORIGINS?.split(',') || []),
 ]
 
@@ -68,6 +71,10 @@ await app.register(cors, {
     }
     // 开发环境允许所有 localhost
     if (!isProd && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+      return cb(null, true)
+    }
+    // 允许所有 Vercel 预览部署
+    if (origin.endsWith('.vercel.app')) {
       return cb(null, true)
     }
     return cb(new Error('Not allowed by CORS'), false)
