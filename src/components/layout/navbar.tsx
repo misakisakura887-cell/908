@@ -26,11 +26,21 @@ export function Navbar() {
   const { signMessageAsync } = useSignMessage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => typeof window !== 'undefined' && !!localStorage.getItem('mirror_token'));
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const hasTriedLogin = useRef(false);
-  const savedUser = typeof window !== 'undefined' ? getUser() : null;
+  const [savedUser, setSavedUser] = useState<any>(null);
   const displayAddress = address || savedUser?.walletAddress;
+
+  // Hydration-safe: read localStorage after mount
+  useEffect(() => {
+    const token = getToken();
+    const user = getUser();
+    if (token) {
+      setIsLoggedIn(true);
+      setSavedUser(user);
+    }
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
