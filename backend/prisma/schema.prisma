@@ -7,131 +7,432 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============== 用户系统 ==============
+
 model User {
-  id            String   @id @default(uuid())
-  walletAddress String   @unique @map("wallet_address")
-  nonce         String   @default(uuid())
-  createdAt     DateTime @default(now()) @map("created_at")
-  lastLogin     DateTime? @map("last_login")
+  id            String   @id @default(cuid())
+  email         String?  @unique
+  emailVerified Boolean  @default(false)
+  
+  // 钱包登录
+  walletAddress String?  @unique
+  hlAddress     String?
+  hlApiKey      String?  // 加密存储
+  
+  // 余额
+  usdtBalance   Decimal  @default(0) @db.Decimal(18, 6)
+  
+  // 风控
+  dailyLimit    Decimal  @default(100000) @db.Decimal(12, 2) // CNY
+  isBlocked     Boolean  @default(false)
+  
+  // 权限
+  isAdmin       Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  positions UserPosition[]
-  sessions  Session[]
-
-  @@index([walletAddress])
-  @@map("users")
-}
-
-model Strategy {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  strategyType String  @map("strategy_type")
-  assetClass  String   @map("asset_class")
-  riskLevel   Int      @map("risk_level")
+  // Strategy Owner
+  isStrategyOwner Boolean  @default(false)
+  strategies      Strategy[]
   
-  custodyAddress String? @map("custody_address")
-  
-  totalReturn  Decimal? @db.Decimal(10, 4) @map("total_return")
-  sharpeRatio  Decimal? @db.Decimal(10, 4) @map("sharpe_ratio")
-  maxDrawdown  Decimal? @db.Decimal(10, 4) @map("max_drawdown")
-  winRate      Decimal? @db.Decimal(5, 2) @map("win_rate")
-  
-  totalAum     Decimal  @default(0) @db.Decimal(20, 2) @map("total_aum")
-  followerCount Int     @default(0) @map("follower_count")
-  
-  isActive    Boolean  @default(true) @map("is_active")
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  positions UserPosition[]
-  trades    Trade[]
-  performance StrategyPerformance[]
-
-  @@index([strategyType])
-  @@index([isActive])
-  @@map("strategies")
-}
-
-model UserPosition {
-  id       String   @id @default(uuid())
-  userId   String   @map("user_id")
-  strategyId String @map("strategy_id")
-  
-  investedAmount  Decimal @db.Decimal(20, 2) @map("invested_amount")
-  currentValue    Decimal @db.Decimal(20, 2) @map("current_value")
-  
-  realizedPnl     Decimal @default(0) @db.Decimal(20, 2) @map("realized_pnl")
-  unrealizedPnl   Decimal @default(0) @db.Decimal(20, 2) @map("unrealized_pnl")
-  
-  entryTime    DateTime @default(now()) @map("entry_time")
-  lastUpdate   DateTime @default(now()) @map("last_update")
-  
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, strategyId])
-  @@index([userId])
-  @@index([strategyId])
-  @@map("user_positions")
-}
-
-model Trade {
-  id         String   @id @default(uuid())
-  strategyId String   @map("strategy_id")
-  
-  symbol     String
-  side       String
-  quantity   Decimal  @db.Decimal(20, 8)
-  price      Decimal  @db.Decimal(20, 8)
-  
-  orderId    String?  @map("order_id")
-  status     String   @default("pending")
-  
-  fee        Decimal  @default(0) @db.Decimal(20, 8)
-  
-  executedAt DateTime? @map("executed_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  
-  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-
-  @@index([strategyId])
-  @@index([symbol])
-  @@index([executedAt])
-  @@map("trades")
-}
-
-model StrategyPerformance {
-  id         String   @id @default(uuid())
-  strategyId String   @map("strategy_id")
-  
-  date       DateTime @db.Date
-  dailyReturn      Decimal? @db.Decimal(10, 4) @map("daily_return")
-  cumulativeReturn Decimal? @db.Decimal(10, 4) @map("cumulative_return")
-  
-  aum        Decimal? @db.Decimal(20, 2)
-  
-  createdAt  DateTime @default(now()) @map("created_at")
-  
-  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-
-  @@unique([strategyId, date])
-  @@index([strategyId, date])
-  @@map("strategy_performance")
+  // Relations
+  rampOrders    RampOrder[]
+  auditLogs     AuditLog[]
+  sessions      Session[]
+  verifications EmailVerification[]
+  positions     InvestPosition[]
+  copyTrades    CopyTrade[]
+  deposits      DepositRecord[]
+  withdrawals   WithdrawRecord[]
+  tradingBots      TradingBot[]
+  botTrades        BotTrade[]
+  tradeLogs        TradeLog[]
+  balanceSnapshots BalanceSnapshot[]
 }
 
 model Session {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  tokenHash String   @map("token_hash")
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
   
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  revokedAt DateTime? @map("revoked_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  code      String
+  type      String   // 'register' | 'login'
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============== 出入金系统 ==============
+
+enum RampType {
+  DEPOSIT   // 入金: CNY -> USDT
+  WITHDRAW  // 出金: USDT -> CNY
+}
+
+enum RampStatus {
+  PENDING           // 待支付（入金）/ 待审核（出金）
+  PAID              // 已支付待确认（入金）
+  PROCESSING        // 处理中
+  COMPLETED         // 已完成
+  CANCELLED         // 已取消
+  TIMEOUT           // 已超时
+  REJECTED          // 已拒绝
+}
+
+enum PaymentMethod {
+  WECHAT
+  ALIPAY
+}
+
+model RampOrder {
+  id              String        @id @default(cuid())
+  orderNo         String        @unique // 展示用订单号: D20240224001
+  userId          String
+  type            RampType
+  status          RampStatus    @default(PENDING)
+  
+  // 金额
+  cnyAmount       Decimal       @db.Decimal(12, 2)
+  usdtAmount      Decimal       @db.Decimal(18, 6)
+  rate            Decimal       @db.Decimal(10, 4)  // 成交汇率
+  feeRate         Decimal       @default(0.005) @db.Decimal(5, 4)
+  fee             Decimal       @db.Decimal(18, 6)  // 手续费 (USDT)
+  
+  // 支付信息
+  paymentMethod   PaymentMethod?
+  paymentInfo     Json?         // 加密存储的收款信息
+  paymentQrCode   String?       // 收款二维码 URL
+  
+  // 时间戳
+  expiresAt       DateTime?     // 入金订单超时时间
+  paidAt          DateTime?     // 用户标记已付款
+  confirmedAt     DateTime?     // 运营确认收款
+  completedAt     DateTime?
+  
+  // 处理人
+  processedBy     String?       // 处理人 ID
+  processNote     String?       // 处理备注
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  user            User          @relation(fields: [userId], references: [id])
+  ledgerEntries   PoolLedger[]
+  
+  @@index([userId, createdAt])
+  @@index([status, type])
+}
+
+// ============== 资金池 ==============
+
+model PoolLedger {
+  id           String    @id @default(cuid())
+  orderId      String?
+  
+  cnyChange    Decimal   @db.Decimal(12, 2)
+  usdtChange   Decimal   @db.Decimal(18, 6)
+  cnyBalance   Decimal   @db.Decimal(12, 2)   // 变动后 CNY 余额
+  usdtBalance  Decimal   @db.Decimal(18, 6)   // 变动后 USDT 余额
+  
+  note         String?
+  createdAt    DateTime  @default(now())
+  
+  order        RampOrder? @relation(fields: [orderId], references: [id])
+}
+
+// ============== 价格 ==============
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  source     String   // 'binance' | 'okx' | 'average'
+  buyPrice   Decimal  @db.Decimal(10, 4)  // 买入价
+  sellPrice  Decimal  @db.Decimal(10, 4)  // 卖出价
+  createdAt  DateTime @default(now())
+  
+  @@index([source, createdAt])
+}
+
+// ============== 审计 ==============
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String   // 'login' | 'deposit' | 'withdraw' | 'admin_confirm' etc
+  targetType  String?  // 'order' | 'user'
+  targetId    String?
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
+// ============== 投资持仓 ==============
+
+model InvestPosition {
+  id           String   @id @default(cuid())
+  userId       String
+  strategyId   String
+  strategyName String
+  invested     Decimal  @db.Decimal(18, 6)  // 投入本金
+  current      Decimal  @db.Decimal(18, 6)  // 当前价值
+  pnl          Decimal  @default(0) @db.Decimal(18, 6)  // 盈亏
+  pnlPct       Decimal  @default(0) @db.Decimal(8, 4)   // 盈亏比例
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, strategyId])
+  @@index([userId])
+}
+
+// ============== Strategy Owner 策略系统 ==============
+
+model Strategy {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  type          String   @default("custom") // custom, quant, manual
+  status        String   @default("draft") // draft, active, paused, archived
+  
+  // 策略参数 (JSON)
+  rules         Json?    // 入场/出场规则
+  riskParams    Json?    // 风控参数
+  universe      Json?    // 交易标的
+  
+  // 业绩数据
+  return7d      Decimal  @default(0) @db.Decimal(10, 4)
+  return30d     Decimal  @default(0) @db.Decimal(10, 4)
+  returnTotal   Decimal  @default(0) @db.Decimal(10, 4)
+  sharpeRatio   Decimal  @default(0) @db.Decimal(6, 2)
+  maxDrawdown   Decimal  @default(0) @db.Decimal(6, 2)
+  winRate       Decimal  @default(0) @db.Decimal(5, 2)
+  
+  // 统计
+  followers     Int      @default(0)
+  aum           Decimal  @default(0) @db.Decimal(18, 2) // 管理资产
+  
+  // 关联
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id])
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([ownerId])
+  @@index([status])
+}
+
+model StrategySignal {
+  id          String   @id @default(cuid())
+  strategyId  String
+  
+  type        String   // entry, exit, alert
+  direction   String?  // long, short
+  symbol      String
+  price       Decimal? @db.Decimal(18, 8)
+  quantity    Decimal? @db.Decimal(18, 8)
+  reason      String?
+  
+  status      String   @default("pending") // pending, executed, cancelled
+  executedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([strategyId])
+  @@index([createdAt])
+}
+
+// ============== 跟单系统 ==============
+
+model CopyTrade {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategyId  String   // "longtou"
+  amount      Decimal  @db.Decimal(18, 6)  // 投入金额
+  ratio       Decimal  @db.Decimal(10, 8)  // 跟单比例
+  status      String   @default("active") // active/paused/stopped
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([strategyId])
+}
+
+model StrategySnapshot {
+  id          String   @id @default(cuid())
+  strategyId  String
+  positions   Json     // 金明老师的仓位快照
+  orders      Json     // 挂单快照
+  totalValue  Decimal  @db.Decimal(18, 6)
+  createdAt   DateTime @default(now())
+  
+  @@index([strategyId, createdAt])
+}
+
+// ============== 充值记录 ==============
+
+model DepositRecord {
+  id          String    @id @default(cuid())
+  userId      String
+  txHash      String    @unique
+  network     String    // arbitrum, bsc
+  amount      Decimal   @db.Decimal(18, 6)
+  fromAddress String
+  toAddress   String
+  status      String    @default("PENDING") // PENDING, COMPLETED, FAILED
+  createdAt   DateTime  @default(now())
+  confirmedAt DateTime?
+  
+  user User @relation(fields: [userId], references: [id])
+  
+  @@index([userId, createdAt])
+  @@index([txHash])
+}
+
+// ============== 交易机器人 ==============
+
+model TradingBot {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String   // trend_following, swing_trading, grid_martin, etc.
+  category    String   @default("core")
+  description String?
+  symbols     String[] @default(["BTC", "ETH"])
+  params      Json     @default("{}")
+  riskParams  Json     @default("{}")
+  riskLevel   String   @default("balanced") // conservative, balanced, aggressive
+  status      String   @default("STOPPED")  // STOPPED, RUNNING, PAUSED, ERROR
+  error       String?
+  isPublic    Boolean  @default(false)       // 是否公开 (让其他人跟单)
+  followers   Int      @default(0)
+  totalPnl    Decimal  @db.Decimal(18, 6) @default(0)
+  totalTrades Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User       @relation(fields: [userId], references: [id])
+  trades BotTrade[]
 
   @@index([userId])
-  @@index([tokenHash])
-  @@map("sessions")
+  @@index([isPublic, status])
+  @@index([type])
+}
+
+model BotTrade {
+  id         String   @id @default(cuid())
+  botId      String
+  userId     String
+  symbol     String
+  side       String   // buy, sell
+  size       Float
+  price      Float
+  reason     String?
+  confidence Float?
+  pnl        Float    @default(0)
+  createdAt  DateTime @default(now())
+
+  bot  TradingBot @relation(fields: [botId], references: [id])
+  user User       @relation(fields: [userId], references: [id])
+
+  @@index([botId, createdAt])
+  @@index([userId, createdAt])
+}
+
+// ============== 提现记录 ==============
+
+model WithdrawRecord {
+  id            String    @id @default(cuid())
+  userId        String
+  network       String
+  amount        Decimal   @db.Decimal(18, 6)
+  fee           Decimal   @db.Decimal(18, 6)
+  receiveAmount Decimal   @db.Decimal(18, 6)
+  toAddress     String
+  status        String    @default("PENDING") // PENDING, APPROVED, COMPLETED, REJECTED
+  txHash        String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+  
+  user User @relation(fields: [userId], references: [id])
+  
+  @@index([userId, createdAt])
+}
+
+// ============== 交易审计日志 ==============
+
+model TradeLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  copyTradeId String?
+  
+  trigger     String   // 'initial_sync' | 'incremental_sync' | 'manual' | 'bot'
+  coin        String
+  market      String   // 'perps' | 'spot'
+  side        String   // 'BUY' | 'SELL'
+  requestedSz Float
+  requestedPx Float
+  filledSz    Float?
+  filledPx    Float?
+  hlOid       String?
+  
+  status      String   // 'filled' | 'partial' | 'rejected' | 'error'
+  errorMsg    String?
+  hlResponse  Json?
+  
+  ratioUsed   Float?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId, createdAt])
+  @@index([copyTradeId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BalanceSnapshot {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  hlAddress         String
+  
+  perpsValue        Float
+  spotUsdc          Float
+  spotPositionValue Float
+  totalValue        Float
+  
+  positions         Json
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([userId, createdAt])
+}
+
+// ============== 系统配置 ==============
+
+model SystemConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 }

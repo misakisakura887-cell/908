@@ -1,247 +1,101 @@
-# 908 - AI Investment Platform
+# Mirror AI — 人人可用的 AI 投资平台
 
-> Next-gen AI quantitative trading on Hyperliquid
+基于 Hyperliquid DEX 的去中心化 AI 投资平台。
 
-## 🚀 Features
-
-- **AI-Driven Strategies**: Machine learning-powered quantitative trading
-- **Multi-Asset Support**: Crypto, Gold, and Mixed portfolios
-- **Self-Custody**: No-KYC, decentralized access
-- **Real-Time Analytics**: Live performance tracking and risk metrics
-- **Web3 Integration**: Connect with MetaMask or any EVM wallet
-
-## 📦 Tech Stack
-
-### Frontend
-- **Next.js 14** (App Router + Turbopack)
-- **TypeScript**
-- **Tailwind CSS** (Dark theme)
-- **wagmi + viem** (Web3 integration)
-- **React Query** (Data fetching)
-- **Framer Motion** (Animations)
-- **Lucide React** (Icons)
-
-### Backend
-- **Fastify** (Web framework)
-- **Prisma** (ORM)
-- **PostgreSQL** (Database)
-- **Redis** (Cache)
-- **JWT** (Authentication)
-- **viem** (Signature verification)
-
-## 🛠️ Development
-
-### Prerequisites
-- Node.js 22+
-- PostgreSQL 16+
-- Redis 7+
-
-### Quick Start with Docker
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Setup database
-cd backend
-npm run db:push
-npm run db:seed
-```
-
-### Manual Setup
-
-#### Frontend
-```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-```
-
-Visit: http://localhost:3000
-
-#### Backend
-```bash
-cd backend
-
-# Install dependencies
-npm install
-
-# Setup environment variables
-cp .env.example .env
-# Edit .env with your settings
-
-# Setup database
-npm run db:push
-npm run db:seed
-
-# Run development server
-npm run dev
-```
-
-API: http://localhost:3001
-
-## 📂 Project Structure
+## 项目结构
 
 ```
 908/
-├── src/
-│   ├── app/                 # Next.js pages
-│   │   ├── page.tsx         # Home
-│   │   ├── strategies/      # Strategy pages
-│   │   └── dashboard/       # User dashboard
-│   ├── components/
-│   │   ├── ui/              # Base components
-│   │   └── layout/          # Layout components
-│   └── lib/                 # Utilities
-│       ├── api.ts           # API client
-│       ├── wagmi.ts         # Web3 config
-│       └── utils.ts         # Helpers
-├── backend/
+├── src/                  # 前端 (Next.js 14)
+│   ├── app/              # 页面路由
+│   │   ├── admin/        # 管理后台
+│   │   ├── trade/        # 交易跟单
+│   │   ├── portfolio/    # 资产管理
+│   │   ├── strategies/   # 策略广场
+│   │   ├── deposit/      # HL 充值指引
+│   │   └── withdraw/     # 提现
+│   ├── components/       # UI 组件
+│   └── lib/              # 工具库
+├── backend/              # 后端 (Fastify + Prisma)
 │   ├── src/
-│   │   ├── routes/          # API routes
-│   │   │   ├── auth.ts      # Authentication
-│   │   │   ├── strategies.ts # Strategies
-│   │   │   └── positions.ts  # User positions
-│   │   └── index.ts         # Server entry
-│   ├── prisma/
-│   │   ├── schema.prisma    # Database schema
-│   │   └── seed.ts          # Seed data
-│   └── Dockerfile           # Docker config
-├── docker-compose.yml       # Docker Compose
-└── public/                  # Static assets
+│   │   ├── index.ts      # 入口
+│   │   ├── modules/      # 业务模块
+│   │   │   ├── admin/    # 管理后台 API
+│   │   │   ├── auth/     # 认证 (钱包签名)
+│   │   │   ├── copytrade/# 跟单系统
+│   │   │   ├── strategy/ # 策略管理
+│   │   │   ├── bots/     # 12种交易机器人
+│   │   │   └── ...
+│   │   └── lib/          # DB, Redis, Email
+│   └── prisma/           # 数据库 Schema
+├── docker-compose.yml    # PostgreSQL + Redis
+└── package.json          # 前端依赖
 ```
 
-## 🔐 Environment Variables
+## 快速启动
 
-### Frontend (.env.local)
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3001
+### 环境要求
+- Node.js 18+
+- PostgreSQL 16
+- Redis 7
+
+### 1. 前端
+```bash
+npm install
+npm run dev -- -p 3000
 ```
 
-### Backend (backend/.env)
-```env
-DATABASE_URL=postgresql://mirror908:password@localhost:5432/mirror908
-JWT_SECRET=your-secret-key-change-in-production
+### 2. 后端
+```bash
+cd backend
+cp .env.example .env  # 编辑配置
+npm install
+npx prisma db push
+PORT=3001 npx tsx src/index.ts
+```
+
+### 3. 环境变量
+前端 `.env.local`:
+```
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+```
+
+后端 `backend/.env`:
+```
+DATABASE_URL=postgresql://mirror:mirror@localhost:5432/mirror
 REDIS_URL=redis://localhost:6379
-FRONTEND_URL=http://localhost:3000
-PORT=3001
+JWT_SECRET=<至少32字符>
+ENCRYPTION_KEY=<加密密钥>
 ```
 
-## 📊 API Endpoints
+## 核心功能
 
-### Authentication
-- `POST /api/auth/nonce` - Get nonce for wallet
-- `POST /api/auth/verify` - Verify signature & get JWT
+- **钱包登录**: MetaMask/WalletConnect 签名验证
+- **一键跟单**: 跟随策略老师仓位，自动在用户 HL 账户下单
+- **实时持仓**: 5秒刷新，显示真实 HL 仓位和盈亏
+- **12种交易机器人**: 趋势、网格、套利、AI强化学习等
+- **管理后台**: 用户管理、交易审计、策略监控 (`/admin`)
 
-### Strategies
-- `GET /api/strategies` - List strategies (with filters)
-- `GET /api/strategies/:id` - Get strategy details
+## 架构模式
 
-### Positions (Authenticated)
-- `GET /api/positions` - Get user positions
-- `POST /api/positions` - Invest in strategy
-- `POST /api/positions/:id/withdraw` - Withdraw funds
+**路径A (用户自持资金)**:
+- 用户资金始终在自己的 Hyperliquid 钱包
+- 平台通过用户授权的 API Key 代为执行交易
+- 平台不托管任何资金
 
-## 🚢 Deployment
+## 管理后台
 
-### Frontend (Vercel)
-```bash
-# Build
-npm run build
+访问 `/admin`，默认账号: admin / admin
 
-# Deploy
-vercel deploy --prod
-```
+## 技术栈
 
-### Backend (Docker)
-```bash
-cd backend
-docker build -t 908-backend .
-docker run -p 3001:3001 --env-file .env 908-backend
-```
+| 层级 | 技术 |
+|------|------|
+| 前端 | Next.js 14, Tailwind CSS, wagmi v2, Framer Motion |
+| 后端 | Fastify, TypeScript, Prisma ORM |
+| 数据库 | PostgreSQL 16, Redis 7 |
+| 链上 | Hyperliquid DEX, Arbitrum, viem |
 
-### Full Stack (Docker Compose)
-```bash
-docker-compose up -d
-```
+## License
 
-## 🧪 Testing
-
-### Frontend
-```bash
-npm run test
-npm run lint
-```
-
-### Backend
-```bash
-cd backend
-npm run test
-npm run lint
-```
-
-## 📝 Development Workflow
-
-1. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-
-2. **Make changes and test**
-   ```bash
-   npm run dev
-   ```
-
-3. **Commit with conventional commits**
-   ```bash
-   git commit -m "feat: add new feature"
-   ```
-
-4. **Push and create PR**
-   ```bash
-   git push origin feature/your-feature
-   ```
-
-## 🏗️ Architecture
-
-```
-┌─────────────┐
-│   Browser   │
-│  (wagmi +   │
-│   viem)     │
-└──────┬──────┘
-       │
-       ├─────────────┐
-       │             │
-┌──────▼──────┐ ┌───▼────────┐
-│  Next.js    │ │  Fastify   │
-│  Frontend   │ │  Backend   │
-│  (Vercel)   │ │  (Docker)  │
-└──────┬──────┘ └───┬────────┘
-       │            │
-       │      ┌─────▼─────┐
-       │      │ PostgreSQL│
-       │      │  (Prisma) │
-       │      └───────────┘
-       │
-       │      ┌───────────┐
-       └──────►  Wallet   │
-              │ (MetaMask)│
-              └───────────┘
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## 📝 License
-
-MIT © TAKI Organization
-
----
-
-**Built by Mirror AI** 💩
-
-*人人可用的 AI 投资平台*
+Private - TAKI Organization
