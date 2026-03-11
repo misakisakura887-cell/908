@@ -28,23 +28,13 @@ export const copyTradeService = {
       throw new Error('HL_VERIFY_FAILED: 私钥解密失败，请重新绑定')
     }
     
-    // 检查 HL 余额 — 同时检查绑定的 hlAddress 和登录的 walletAddress
-    // 因为用户可能把资金存在 walletAddress (也是有效的 HL 地址)
+    // 检查 HL API 钱包余额（HL 的 API 交易使用独立钱包，资金必须在 API 钱包内）
     const hlBalance = await this.getHLBalance(user.hlAddress)
-    let hlAvailable = hlBalance.totalAvailable
-    
-    // 如果 hlAddress 余额不足，检查 walletAddress
-    if (hlAvailable < amount && user.walletAddress && user.walletAddress.toLowerCase() !== user.hlAddress.toLowerCase()) {
-      const walletBalance = await this.getHLBalance(user.walletAddress)
-      if (walletBalance.totalAvailable > hlAvailable) {
-        hlAvailable = walletBalance.totalAvailable
-        console.log(`📋 Using walletAddress balance: $${hlAvailable.toFixed(2)} (hlAddress had: $${hlBalance.totalAvailable.toFixed(2)})`)
-      }
-    }
-    console.log(`✅ HL balance for ${userId}: $${hlAvailable.toFixed(2)}`)
+    const hlAvailable = hlBalance.totalAvailable
+    console.log(`✅ HL API wallet balance for ${userId}: $${hlAvailable.toFixed(2)} (${user.hlAddress})`)
     
     if (hlAvailable < amount) {
-      throw new Error(`HL 余额不足 (可用: $${hlAvailable.toFixed(2)}, 需要: $${amount})。请先在 Hyperliquid 充值 USDC`)
+      throw new Error(`HL API 钱包余额不足 (可用: $${hlAvailable.toFixed(2)}, 需要: $${amount})。请在 Hyperliquid 将 USDC 转入您的 API 钱包`)
     }
     
     // 获取策略的总仓位值（龙头多头策略）
