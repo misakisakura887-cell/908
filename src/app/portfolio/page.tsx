@@ -168,7 +168,10 @@ export default function PortfolioPage() {
                   </h2>
                   <div className="flex items-center gap-3 mt-2">
                     <span className={`text-sm font-medium ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)} ({totalPnlPct >= 0 ? '+' : ''}{totalPnlPct.toFixed(2)}%)
+                      {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)} USDT
+                    </span>
+                    <span className={`text-sm font-medium px-2 py-0.5 rounded ${totalPnl >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {totalPnlPct >= 0 ? '+' : ''}{totalPnlPct.toFixed(2)}%
                     </span>
                     {user?.walletAddress && (
                       <span className="text-[hsl(var(--muted-foreground))] font-mono text-xs">
@@ -302,37 +305,71 @@ export default function PortfolioPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {copyPositions.map((pos) => (
-                      <div key={pos.id} className="p-4 bg-[hsl(var(--secondary))]/30 rounded-xl border border-[hsl(var(--border))]/30">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{pos.strategyId === 'longtou' ? '龙头多头策略' : pos.strategyId}</h4>
-                            <span className={`px-2 py-0.5 rounded text-xs ${
-                              pos.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'
-                            }`}>
-                              {pos.status === 'active' ? '活跃' : '暂停'}
-                            </span>
+                    {copyPositions.map((pos) => {
+                      const pnl = parseFloat(pos.pnl);
+                      const pnlPct = parseFloat(pos.pnlPct);
+                      const tradeablePositions = (pos.positions || []).filter((p: any) => p.tradeable !== false);
+                      return (
+                        <div key={pos.id} className="p-4 bg-[hsl(var(--secondary))]/30 rounded-xl border border-[hsl(var(--border))]/30">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{pos.strategyId === 'longtou' ? '龙头多头策略' : pos.strategyId}</h4>
+                              <span className={`px-2 py-0.5 rounded text-xs ${
+                                pos.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'
+                              }`}>
+                                {pos.status === 'active' ? '活跃' : '暂停'}
+                              </span>
+                            </div>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => router.push('/trade')}>查看</Button>
+                          <div className="grid grid-cols-4 gap-4 text-sm mb-3">
+                            <div>
+                              <p className="text-xs text-[hsl(var(--muted-foreground))]">投入</p>
+                              <p className="font-medium">${parseFloat(pos.invested).toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-[hsl(var(--muted-foreground))]">当前价值</p>
+                              <p className="font-medium">${parseFloat(pos.current).toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-[hsl(var(--muted-foreground))]">盈亏</p>
+                              <p className={`font-medium ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-[hsl(var(--muted-foreground))]">收益率</p>
+                              <p className={`font-medium ${pnlPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
+                              </p>
+                            </div>
+                          </div>
+                          {/* 跟单子持仓（只显示可交易的） */}
+                          {tradeablePositions.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-[hsl(var(--border))]/20">
+                              <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">跟单持仓明细</p>
+                              {tradeablePositions.map((p: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between text-xs py-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{p.coin}</span>
+                                    <span className={`px-1 py-0.5 rounded text-[10px] ${
+                                      p.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                                    }`}>{p.direction === 'LONG' ? '多' : '空'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-4 font-mono">
+                                    <span className="text-[hsl(var(--muted-foreground))]">{p.size?.toFixed(4)} 股</span>
+                                    <span>入 ${p.entryPrice?.toFixed(2)}</span>
+                                    <span>现 ${p.currentPrice?.toFixed(2)}</span>
+                                    <span className={p.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                      {p.pnl >= 0 ? '+' : ''}{p.pnl?.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <p className="text-xs text-[hsl(var(--muted-foreground))]">投入</p>
-                            <p className="font-medium">${parseFloat(pos.invested).toFixed(2)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-[hsl(var(--muted-foreground))]">当前</p>
-                            <p className="font-medium">${parseFloat(pos.current).toFixed(2)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-[hsl(var(--muted-foreground))]">盈亏</p>
-                            <p className={`font-medium ${parseFloat(pos.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {parseFloat(pos.pnl) >= 0 ? '+' : ''}{parseFloat(pos.pnl).toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
