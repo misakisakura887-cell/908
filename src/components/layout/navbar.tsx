@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 const navLinks = [
   { href: '/trade', label: '交易', icon: TrendingUp },
   { href: '/portfolio', label: '资产', icon: Wallet, authRequired: true },
-  { href: '/deposit', label: '充值', icon: ArrowDownToLine, authRequired: true },
+  { href: '/deposit', label: 'HL 充值', icon: ArrowDownToLine, authRequired: true },
 ];
 
 export function Navbar() {

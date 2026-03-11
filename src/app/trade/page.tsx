@@ -303,14 +303,19 @@ export default function TradePage() {
               <Card className="sticky top-24 bg-[hsl(var(--card))]/60 backdrop-blur-sm border-cyan-500/20">
                 <CardHeader className="pb-3"><CardTitle className="text-base">一键跟单</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                  <div><Label className="text-xs text-[hsl(var(--muted-foreground))]">投入金额 (USDT)</Label>
-                    <Input type="number" placeholder="100" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1" /></div>
+                  <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/10 text-xs text-[hsl(var(--muted-foreground))]">
+                    <p className="mb-1">💡 资金使用您自己的 Hyperliquid 钱包</p>
+                    <p>跟单后仓位建在您的 HL 账户上，您可随时在 HL 查看。需先绑定 HL 钱包并确保有足够 USDC。</p>
+                  </div>
+                  <div><Label className="text-xs text-[hsl(var(--muted-foreground))]">跟单金额 (USDC) — 将从您的 HL 余额使用</Label>
+                    <Input type="number" placeholder="10" min="10" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1" /></div>
                   <div className="flex flex-wrap gap-1.5">{[10, 50, 100, 500].map(q => (
                     <button key={q} onClick={() => setAmount(String(q))} className={`px-3 py-1 rounded text-xs border transition-all ${amount === String(q) ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400' : 'border-[hsl(var(--border))]'}`}>${q}</button>
                   ))}</div>
                   <Button onClick={handleFollow} disabled={submitting} className="w-full" size="lg">
                     <TrendingUp size={16} className="mr-1" /> {submitting ? '处理中...' : '确认跟单'}
                   </Button>
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]/60 text-center">最低跟单 $10 · 仓位实时同步至您的 HL</p>
                 </CardContent>
               </Card>
             </div>
