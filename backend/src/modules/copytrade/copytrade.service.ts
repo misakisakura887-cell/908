@@ -28,9 +28,19 @@ export const copyTradeService = {
       throw new Error('HL_VERIFY_FAILED: 私钥解密失败，请重新绑定')
     }
     
-    // 检查 HL 余额
+    // 检查 HL 余额 — 同时检查绑定的 hlAddress 和登录的 walletAddress
+    // 因为用户可能把资金存在 walletAddress (也是有效的 HL 地址)
     const hlBalance = await this.getHLBalance(user.hlAddress)
-    const hlAvailable = hlBalance.totalAvailable
+    let hlAvailable = hlBalance.totalAvailable
+    
+    // 如果 hlAddress 余额不足，检查 walletAddress
+    if (hlAvailable < amount && user.walletAddress && user.walletAddress.toLowerCase() !== user.hlAddress.toLowerCase()) {
+      const walletBalance = await this.getHLBalance(user.walletAddress)
+      if (walletBalance.totalAvailable > hlAvailable) {
+        hlAvailable = walletBalance.totalAvailable
+        console.log(`📋 Using walletAddress balance: $${hlAvailable.toFixed(2)} (hlAddress had: $${hlBalance.totalAvailable.toFixed(2)})`)
+      }
+    }
     console.log(`✅ HL balance for ${userId}: $${hlAvailable.toFixed(2)}`)
     
     if (hlAvailable < amount) {
