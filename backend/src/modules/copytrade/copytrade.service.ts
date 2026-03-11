@@ -128,6 +128,38 @@ export const copyTradeService = {
     const orders = (latestSnapshot.orders as any[]) || []
     const sdk = new Hyperliquid({ privateKey: hlPrivateKey, walletAddress: hlAddress, enableWs: false })
     
+    // === 防重复：获取用户当前 HL 持仓，跳过已持有的币种 ===
+    const existingCoins = new Set<string>()
+    try {
+      // 获取 perps 持仓
+      const perpsState = await fetch('https://api.hyperliquid.xyz/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'clearinghouseState', user: hlAddress }),
+      }).then(r => r.json())
+      for (const p of perpsState?.assetPositions || []) {
+        const szi = parseFloat(p?.position?.szi || '0')
+        if (szi !== 0) existingCoins.add(p.position.coin)
+      }
+      // 获取 spot 持仓
+      const spotState = await fetch('https://api.hyperliquid.xyz/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'spotClearinghouseState', user: hlAddress }),
+      }).then(r => r.json())
+      for (const b of spotState?.balances || []) {
+        const hold = parseFloat(b?.hold || '0')
+        const total = parseFloat(b?.total || '0')
+        if (total > 0 || hold > 0) {
+          // spot token name (e.g., "GOOGL") — need to map from @index
+          existingCoins.add(b.coin) // will be @266 etc
+        }
+      }
+      console.log(`📦 User ${hlAddress.slice(0,8)} existing positions: [${[...existingCoins].join(', ')}]`)
+    } catch (e: any) {
+      console.log(`⚠️ Failed to get user positions, proceeding without dedup: ${e.message}`)
+    }
+    
     // 查找 userId 用于审计日志
     const logUser = await db.user.findFirst({ where: { hlAddress: hlAddress.toLowerCase() } })
     const logUserId = logUser?.id || 'unknown'
@@ -160,6 +192,12 @@ export const copyTradeService = {
         // 解析 SDK 可用的 coin name
         const sdkCoin = coinMap[coin] || coin
         const hasMid = !!prices[sdkCoin]
+        
+        // 防重复：如果用户已持有这个币，跳过
+        if (existingCoins.has(coin) || existingCoins.has(sdkCoin)) {
+          console.log(`  ⏭️ Skip ${coin}: user already holds this position`)
+          continue
+        }
         
         // 获取价格: 先查实时价格，没有则用 entryPrice
         let currentPrice = parseFloat(prices[sdkCoin] || '0')
