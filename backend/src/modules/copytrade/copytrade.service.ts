@@ -365,9 +365,34 @@ export const copyTradeService = {
       },
     })
     
+    // 获取实时价格（一次性，所有跟单共用）
+    let livePrices: Record<string, string> = {}
+    let spotMeta: any = null
+    try {
+      livePrices = await this.hlApiPost('allMids') as Record<string, string>
+      spotMeta = await this.hlApiPost('spotMeta')
+    } catch (e) { console.log('⚠️ Failed to get live prices for copy positions') }
+    
+    // 构建 coin → price 映射 (处理 @index 格式)
+    const coinPriceMap: Record<string, number> = {}
+    for (const [k, v] of Object.entries(livePrices)) {
+      coinPriceMap[k] = parseFloat(v)
+      if (k.endsWith('-SPOT')) coinPriceMap[k.replace('-SPOT', '')] = parseFloat(v)
+    }
+    if (spotMeta?.tokens && spotMeta?.universe) {
+      const tokenMap = new Map<number, string>()
+      for (const t of spotMeta.tokens) tokenMap.set(t.index, t.name)
+      for (const pair of spotMeta.universe) {
+        if (pair.tokens?.length >= 2) {
+          const baseName = tokenMap.get(pair.tokens[0])
+          const mid = parseFloat(livePrices[pair.name] || '0')
+          if (baseName && mid > 0) coinPriceMap[baseName] = mid
+        }
+      }
+    }
+    
     const positions = await Promise.all(
       copyTrades.map(async (ct) => {
-        // 获取最新快照
         const latestSnapshot = await db.strategySnapshot.findFirst({
           where: { strategyId: ct.strategyId },
           orderBy: { createdAt: 'desc' },
@@ -375,43 +400,59 @@ export const copyTradeService = {
         
         if (!latestSnapshot) {
           return {
-            id: ct.id,
-            strategyId: ct.strategyId,
-            invested: ct.amount.toString(),
-            current: ct.amount.toString(),
-            pnl: '0',
-            pnlPct: '0',
-            status: ct.status,
-            positions: [],
+            id: ct.id, strategyId: ct.strategyId,
+            invested: ct.amount.toString(), current: ct.amount.toString(),
+            pnl: '0', pnlPct: '0', status: ct.status, positions: [],
           }
         }
         
-        // 根据比例计算用户的仓位
         const ratio = ct.ratio
-        const snapshotTotalValue = latestSnapshot.totalValue.toNumber()
-        const positions = (latestSnapshot.positions as any[]).map((pos: any) => ({
-          ...pos,
-          size: new Decimal(pos.size).mul(ratio).toNumber(),
-          value: new Decimal(pos.value).mul(ratio).toNumber(),
-          pnl: new Decimal(pos.pnl || 0).mul(ratio).toNumber(),
-        }))
+        const snapshotPositions = latestSnapshot.positions as any[]
         
-        // currentValue = 用户按比例的策略总价值（包含 USDC 现金部分）
-        const currentValue = new Decimal(snapshotTotalValue).mul(ratio).toNumber()
+        // 用实时价格计算每个持仓的当前价值和盈亏
+        let liveTotal = 0
+        const positionsWithLive = snapshotPositions.map((pos: any) => {
+          const userSize = new Decimal(pos.size).mul(ratio).toNumber()
+          const livePrice = coinPriceMap[pos.coin] || pos.currentPrice || pos.entryPrice
+          const entryPrice = pos.entryPrice || livePrice
+          const value = userSize * livePrice
+          const costBasis = userSize * entryPrice
+          const pnl = value - costBasis
+          const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0
+          
+          if (pos.tradeable !== false) liveTotal += value
+          
+          return {
+            ...pos,
+            size: userSize,
+            currentPrice: livePrice,
+            value,
+            pnl,
+            pnlPct: parseFloat(pnlPct.toFixed(2)),
+          }
+        })
+        
+        // 加上 USDC 现金部分（按比例）
+        const snapshotTotalValue = latestSnapshot.totalValue.toNumber()
+        const tradeablePositionValue = snapshotPositions
+          .filter((p: any) => p.tradeable !== false)
+          .reduce((s: number, p: any) => s + (p.value || 0), 0)
+        const cashPortion = Math.max(0, snapshotTotalValue - tradeablePositionValue)
+        const userCash = cashPortion * ratio.toNumber()
+        
+        const currentValue = liveTotal + userCash
         const invested = ct.amount.toNumber()
-        // PnL = 当前价值 - 投入金额
         const totalPnl = currentValue - invested
         const pnlPct = invested !== 0 ? (totalPnl / invested) * 100 : 0
         
         return {
-          id: ct.id,
-          strategyId: ct.strategyId,
+          id: ct.id, strategyId: ct.strategyId,
           invested: ct.amount.toString(),
           current: currentValue.toFixed(2),
           pnl: totalPnl.toFixed(2),
           pnlPct: pnlPct.toFixed(2),
           status: ct.status,
-          positions,
+          positions: positionsWithLive,
         }
       })
     )

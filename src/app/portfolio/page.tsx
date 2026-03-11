@@ -131,11 +131,14 @@ export default function PortfolioPage() {
     init();
   }, [loadUser, fetchHLPositions, fetchCopyPositions]);
 
-  // 5秒自动刷新 HL 持仓（实时价格）
+  // 5秒自动刷新 HL 持仓 + 跟单持仓（实时价格）
   useEffect(() => {
-    intervalRef.current = setInterval(() => fetchHLPositions(), 5000);
+    intervalRef.current = setInterval(() => {
+      fetchHLPositions();
+      fetchCopyPositions();
+    }, 5000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [fetchHLPositions]);
+  }, [fetchHLPositions, fetchCopyPositions]);
 
   if (loading) {
     return (
