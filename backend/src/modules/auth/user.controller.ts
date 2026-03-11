@@ -161,6 +161,12 @@ export async function userRoutes(app: FastifyInstance) {
       const body = bindHLSchema.parse(request.body)
       const { userId } = request.user as { userId: string }
       
+      // 检查用户是否存在
+      const existingUser = await db.user.findUnique({ where: { id: userId } })
+      if (!existingUser) {
+        return reply.status(401).send({ error: '用户不存在，请重新连接钱包登录' })
+      }
+      
       // 加密私钥
       const encryptedKey = encrypt(body.hlPrivateKey)
       
@@ -181,7 +187,8 @@ export async function userRoutes(app: FastifyInstance) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({ error: error.errors[0].message })
       }
-      throw error
+      console.error('Bind HL error:', error)
+      return reply.status(500).send({ error: '绑定失败，请重新登录后重试' })
     }
   })
 }
