@@ -1,7 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { db } from '../../lib/db.js'
-import Decimal from 'decimal.js'
 
 const requestSchema = z.object({
   network: z.enum(['arbitrum', 'bsc']),
@@ -29,7 +28,7 @@ export async function withdrawRoutes(app: FastifyInstance) {
 
       // 检查余额
       const user = await db.user.findUnique({ where: { id: userId } })
-      if (!user || new Decimal(user.usdtBalance).lt(body.amount)) {
+      if (!user || parseFloat(String(user.usdtBalance)) < body.amount) {
         return reply.status(400).send({ error: '余额不足' })
       }
 
@@ -37,15 +36,15 @@ export async function withdrawRoutes(app: FastifyInstance) {
       const [_, record] = await db.$transaction([
         db.user.update({
           where: { id: userId },
-          data: { usdtBalance: { decrement: new Decimal(body.amount) } },
+          data: { usdtBalance: { decrement: body.amount } },
         }),
         db.withdrawRecord.create({
           data: {
             userId,
             network: body.network,
-            amount: new Decimal(body.amount),
-            fee: new Decimal(fee),
-            receiveAmount: new Decimal(body.amount - fee),
+            amount: body.amount,
+            fee: fee,
+            receiveAmount: body.amount - fee,
             toAddress: body.toAddress.toLowerCase(),
             status: 'PENDING',
           },

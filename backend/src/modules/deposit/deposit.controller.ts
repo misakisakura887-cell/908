@@ -36,7 +36,7 @@ export async function depositRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: '此交易已处理' })
       }
 
-      const depositAmount = new Decimal(body.amount)
+      const depositAmount = body.amount
       if (depositAmount.lte(0)) {
         return reply.status(400).send({ error: '无效金额' })
       }

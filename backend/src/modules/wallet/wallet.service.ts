@@ -16,7 +16,6 @@ import { createWalletClient, createPublicClient, http, parseUnits, formatUnits, 
 import { privateKeyToAccount } from 'viem/accounts'
 import { arbitrum, bsc } from 'viem/chains'
 import { db } from '../../lib/db.js'
-import Decimal from 'decimal.js'
 
 // 网络配置
 const CHAINS = {
@@ -140,7 +139,7 @@ class WalletService {
       enableWs: false,
     })
     
-    await sdk.exchange.initiateWithdrawal(amount)
+    await sdk.exchange.initiateWithdrawal(withdrawal.toAddress, amount)
     console.log(`📤 HL withdrawal initiated: ${amount} USDT`)
   }
 
@@ -167,7 +166,7 @@ class WalletService {
     for (const withdrawal of pendingWithdrawals) {
       try {
         const network = withdrawal.network as 'arbitrum' | 'bsc'
-        const receiveAmount = new Decimal(withdrawal.receiveAmount).toString()
+        const receiveAmount = String(withdrawal.receiveAmount)
         
         // 检查热钱包余额
         const balance = await this.getHotWalletBalance(network)
