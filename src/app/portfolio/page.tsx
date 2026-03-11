@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Wallet, TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Link as LinkIcon, Shield, RefreshCw, Activity } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Link as LinkIcon, Shield, RefreshCw, Activity, Square, AlertTriangle } from 'lucide-react';
 import { getToken, getCurrentUser, getCopyPositions, setUser as saveUser } from '@/lib/auth';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -102,6 +102,25 @@ export default function PortfolioPage() {
     } catch { /* ignore */ }
   }, []);
 
+  // 停止跟单（退回余额）
+  const stopCopyTrade = async (id: string) => {
+    if (!confirm('确认停止跟单？投入金额将退回平台余额。')) return;
+    const token = getToken();
+    try {
+      const res = await fetch(`${API}/copytrade/${id}/stop`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        toast.success('跟单已停止，资金已退回');
+        await Promise.all([fetchCopyPositions(), loadUser()]);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || '操作失败');
+      }
+    } catch { toast.error('网络错误'); }
+  };
+
   // 首次加载
   useEffect(() => {
     const init = async () => {
@@ -195,6 +214,20 @@ export default function PortfolioPage() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* 平台余额提示 */}
+        {parseFloat(user?.usdtBalance || '0') > 0 && (
+          <div className="mb-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-start gap-3">
+            <AlertTriangle size={18} className="text-yellow-400 mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="text-yellow-400 font-medium mb-1">平台余额: ${parseFloat(user?.usdtBalance || '0').toFixed(2)} USDT</p>
+              <p className="text-[hsl(var(--muted-foreground))]">
+                此余额存放在平台账户中。如需交易，请先将资金充值到您的 Hyperliquid 钱包。
+                <button onClick={() => router.push('/withdraw')} className="text-cyan-400 hover:underline ml-1">提现 →</button>
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -320,6 +353,11 @@ export default function PortfolioPage() {
                                 {pos.status === 'active' ? '活跃' : '暂停'}
                               </span>
                             </div>
+                            {pos.status === 'active' && (
+                              <Button variant="danger" size="sm" onClick={() => stopCopyTrade(pos.id)}>
+                                <Square size={12} className="mr-1" /> 停止跟单
+                              </Button>
+                            )}
                           </div>
                           <div className="grid grid-cols-4 gap-4 text-sm mb-3">
                             <div>
