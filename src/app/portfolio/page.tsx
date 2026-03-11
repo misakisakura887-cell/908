@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Wallet, TrendingUp, ArrowDownToLine, ArrowUpFromLine, Link as LinkIcon, Shield, RefreshCw } from 'lucide-react';
-import { getToken, getCurrentUser, getCopyPositions, setUser as saveUser, getUser } from '@/lib/auth';
+import { Wallet, TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Link as LinkIcon, Shield, RefreshCw, Activity } from 'lucide-react';
+import { getToken, getCurrentUser, getCopyPositions, setUser as saveUser } from '@/lib/auth';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 interface User {
   id: string;
@@ -16,6 +18,30 @@ interface User {
   email?: string | null;
   usdtBalance: string;
   hlAddress?: string | null;
+}
+
+interface HLPosition {
+  coin: string;
+  market: 'perps' | 'spot';
+  direction: 'LONG' | 'SHORT';
+  size: number;
+  entryPrice: number;
+  currentPrice: number;
+  pnl: number;
+  pnlPct: number;
+  value: number;
+  leverage?: number;
+}
+
+interface HLPositionsData {
+  positions: HLPosition[];
+  perpsAccountValue: number;
+  spotUsdcTotal: number;
+  spotPositionValue: number;
+  totalValue: number;
+  totalPnl: number;
+  totalPnlPct: number;
+  updatedAt: string;
 }
 
 interface CopyTradePosition {
@@ -29,48 +55,68 @@ interface CopyTradePosition {
   positions: any[];
 }
 
-interface HLBalance {
-  perps: { accountValue: number; withdrawable: number; positions: any[] };
-  spot: { usdcTotal: number; usdcAvailable: number; positions: any[] };
-  totalValue: number;
-  totalAvailable: number;
-}
-
 export default function PortfolioPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [positions, setPositions] = useState<CopyTradePosition[]>([]);
-  const [hlBalance, setHlBalance] = useState<HLBalance | null>(null);
+  const [copyPositions, setCopyPositions] = useState<CopyTradePosition[]>([]);
+  const [hlData, setHlData] = useState<HLPositionsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
+  // 加载用户基本信息（首次）
+  const loadUser = useCallback(async () => {
     const token = getToken();
     if (!token) { router.push('/'); return; }
-    loadData();
-  }, []);
-
-  const loadData = async () => {
     try {
       const userData = await getCurrentUser();
       setUser(userData);
       saveUser(userData);
-      
-      const token = getToken();
-      // 并行加载跟单仓位 + HL 余额
-      const [posResult, hlResult] = await Promise.allSettled([
-        getCopyPositions(),
-        userData?.hlAddress ? fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/hl-balance`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        }).then(r => r.ok ? r.json() : null) : Promise.resolve(null),
-      ]);
-      
-      setPositions(posResult.status === 'fulfilled' && Array.isArray(posResult.value) ? posResult.value : []);
-      setHlBalance(hlResult.status === 'fulfilled' ? hlResult.value : null);
-    } catch (err) {
-      console.error(err);
-      toast.error('加载失败');
-    } finally { setLoading(false); }
-  };
+    } catch { /* ignore */ }
+  }, [router]);
+
+  // 实时获取 HL 持仓（轻量级，5s 一次）
+  const fetchHLPositions = useCallback(async (showRefreshing = false) => {
+    const token = getToken();
+    if (!token) return;
+    if (showRefreshing) setRefreshing(true);
+    try {
+      const res = await fetch(`${API}/user/hl-positions`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHlData(data);
+        setLastUpdate(new Date());
+      }
+    } catch { /* silent */ }
+    if (showRefreshing) setRefreshing(false);
+  }, []);
+
+  // 获取跟单记录（不需要频繁刷新）
+  const fetchCopyPositions = useCallback(async () => {
+    try {
+      const data = await getCopyPositions();
+      setCopyPositions(Array.isArray(data) ? data : []);
+    } catch { /* ignore */ }
+  }, []);
+
+  // 首次加载
+  useEffect(() => {
+    const init = async () => {
+      await loadUser();
+      await Promise.all([fetchHLPositions(), fetchCopyPositions()]);
+      setLoading(false);
+    };
+    init();
+  }, [loadUser, fetchHLPositions, fetchCopyPositions]);
+
+  // 5秒自动刷新 HL 持仓（实时价格）
+  useEffect(() => {
+    intervalRef.current = setInterval(() => fetchHLPositions(), 5000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [fetchHLPositions]);
 
   if (loading) {
     return (
@@ -83,17 +129,14 @@ export default function PortfolioPage() {
     );
   }
 
-  const balance = parseFloat(user?.usdtBalance || '0');
-  const hlAccountValue = hlBalance?.totalValue || 0;
-  const hlWithdrawable = hlBalance?.totalAvailable || 0;
-  const hlSpotUSDC = hlBalance?.spot?.usdcTotal || 0;
-  const hlPerpsValue = hlBalance?.perps?.accountValue || 0;
-  const hlSpotPositions = hlBalance?.spot?.positions || [];
-  const totalInvested = positions.reduce((s, p) => s + parseFloat(p.invested || '0'), 0);
-  const totalCurrent = positions.reduce((s, p) => s + parseFloat(p.current || '0'), 0);
-  const totalPnl = totalCurrent - totalInvested;
-  // 总资产 = HL 账户总值（所有交易都在 HL 上执行，不重复计算）
-  const totalAssets = hlAccountValue;
+  const totalValue = hlData?.totalValue || 0;
+  const totalPnl = hlData?.totalPnl || 0;
+  const totalPnlPct = hlData?.totalPnlPct || 0;
+  const perpsValue = hlData?.perpsAccountValue || 0;
+  const spotUsdc = hlData?.spotUsdcTotal || 0;
+  const spotPositionValue = hlData?.spotPositionValue || 0;
+  const positions = hlData?.positions || [];
+  const totalInvested = copyPositions.reduce((s, p) => s + parseFloat(p.invested || '0'), 0);
 
   return (
     <div className="min-h-screen bg-[#040405]">
@@ -104,24 +147,35 @@ export default function PortfolioPage() {
         transition={{ duration: 0.3 }}
         className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-12"
       >
-        {/* Total Assets */}
+        {/* Total Assets — 实时更新 */}
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
           <Card className="mb-6 bg-gradient-to-br from-cyan-500/10 via-[hsl(var(--card))]/80 to-blue-500/5 backdrop-blur-sm border-cyan-500/20">
             <CardContent className="pt-6 pb-6">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">总资产估值</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">总资产估值</p>
+                    {lastUpdate && (
+                      <div className="flex items-center gap-1">
+                        <Activity size={10} className="text-emerald-400 animate-pulse" />
+                        <span className="text-[10px] text-emerald-400/70">实时</span>
+                      </div>
+                    )}
+                  </div>
                   <h2 className="text-4xl font-bold tracking-tight">
-                    <span className="text-white">${totalAssets.toFixed(2)}</span>
+                    <span className="text-white">${totalValue.toFixed(2)}</span>
                     <span className="text-lg text-[hsl(var(--muted-foreground))] ml-2">USDT</span>
                   </h2>
-                  <p className="text-sm mt-2">
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className={`text-sm font-medium ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)} ({totalPnlPct >= 0 ? '+' : ''}{totalPnlPct.toFixed(2)}%)
+                    </span>
                     {user?.walletAddress && (
                       <span className="text-[hsl(var(--muted-foreground))] font-mono text-xs">
                         {user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-4)}
                       </span>
                     )}
-                  </p>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => router.push('/deposit')}>
@@ -130,8 +184,8 @@ export default function PortfolioPage() {
                   <Button size="sm" variant="secondary" onClick={() => router.push('/withdraw')}>
                     <ArrowUpFromLine size={14} className="mr-1" /> 提现
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={loadData}>
-                    <RefreshCw size={14} />
+                  <Button size="sm" variant="ghost" onClick={() => fetchHLPositions(true)} disabled={refreshing}>
+                    <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
                   </Button>
                 </div>
               </div>
@@ -140,14 +194,13 @@ export default function PortfolioPage() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Assets + Positions */}
           <div className="lg:col-span-2 space-y-6">
             {/* Asset Breakdown */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'HL 账户价值', value: `$${hlAccountValue.toFixed(2)}`, sub: `Perps: $${hlPerpsValue.toFixed(2)} | Spot: $${hlSpotUSDC.toFixed(2)}`, color: '' },
-                { label: '跟单持仓', value: `$${totalCurrent.toFixed(2)}`, sub: totalInvested > 0 ? `投入: $${totalInvested.toFixed(2)}` : '暂无跟单', color: '' },
-                { label: '总盈亏', value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`, sub: totalInvested > 0 ? `${((totalPnl / totalInvested) * 100).toFixed(2)}%` : '—', color: totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400' },
+                { label: 'Perps 账户', value: `$${perpsValue.toFixed(2)}`, sub: `${positions.filter(p => p.market === 'perps').length} 个仓位`, color: '' },
+                { label: 'Spot 账户', value: `$${(spotUsdc + spotPositionValue).toFixed(2)}`, sub: `USDC: $${spotUsdc.toFixed(2)} | 持仓: $${spotPositionValue.toFixed(2)}`, color: '' },
+                { label: '总盈亏', value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`, sub: `${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%`, color: totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400' },
               ].map((item, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }}>
                   <Card className="bg-[hsl(var(--card))]/60 backdrop-blur-sm">
@@ -161,23 +214,95 @@ export default function PortfolioPage() {
               ))}
             </div>
 
-            {/* Copy Trade Positions */}
+            {/* HL 实时持仓 — 每5秒刷新 */}
             <Card className="bg-[hsl(var(--card))]/60 backdrop-blur-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">跟单仓位</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    HL 持仓
+                    <Activity size={12} className="text-emerald-400 animate-pulse" />
+                  </CardTitle>
+                  {lastUpdate && (
+                    <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                      {lastUpdate.toLocaleTimeString()} 更新
+                    </span>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {positions.length === 0 ? (
                   <div className="text-center py-12">
                     <TrendingUp size={36} className="mx-auto mb-3 text-[hsl(var(--muted-foreground))]/40" />
-                    <p className="text-[hsl(var(--muted-foreground))] mb-3">暂无跟单仓位</p>
+                    <p className="text-[hsl(var(--muted-foreground))] mb-1">暂无持仓</p>
+                    <p className="text-xs text-[hsl(var(--muted-foreground))]/60 mb-3">跟单策略后，仓位将在此实时显示</p>
                     <Button onClick={() => router.push('/trade')} size="sm">
                       开始跟单
                     </Button>
                   </div>
                 ) : (
+                  <div className="space-y-0">
+                    {/* 表头 */}
+                    <div className="grid grid-cols-7 gap-2 text-xs text-[hsl(var(--muted-foreground))] pb-2 border-b border-[hsl(var(--border))]/20 px-2">
+                      <span>标的</span>
+                      <span>方向</span>
+                      <span className="text-right">数量</span>
+                      <span className="text-right">开仓价</span>
+                      <span className="text-right">现价</span>
+                      <span className="text-right">盈亏</span>
+                      <span className="text-right">盈亏%</span>
+                    </div>
+                    {/* 持仓行 */}
+                    {positions.map((pos, idx) => (
+                      <motion.div
+                        key={`${pos.coin}-${pos.market}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className="grid grid-cols-7 gap-2 text-sm py-3 px-2 border-b border-[hsl(var(--border))]/10 hover:bg-[hsl(var(--secondary))]/20 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium">{pos.coin}</span>
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-[hsl(var(--secondary))]/50 text-[hsl(var(--muted-foreground))]">
+                            {pos.market === 'perps' ? '永续' : '现货'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                            pos.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {pos.direction === 'LONG' ? '多' : '空'}
+                            {pos.leverage && pos.leverage > 1 ? ` ${pos.leverage}x` : ''}
+                          </span>
+                        </div>
+                        <span className="text-right font-mono">{pos.size.toFixed(pos.market === 'spot' ? 4 : 5)}</span>
+                        <span className="text-right font-mono">${pos.entryPrice.toFixed(2)}</span>
+                        <span className="text-right font-mono">${pos.currentPrice.toFixed(2)}</span>
+                        <span className={`text-right font-mono font-medium ${pos.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {pos.pnl >= 0 ? '+' : ''}{pos.pnl.toFixed(2)}
+                        </span>
+                        <span className={`text-right font-mono ${pos.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {pos.pnlPct >= 0 ? '+' : ''}{pos.pnlPct.toFixed(2)}%
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 跟单记录 */}
+            <Card className="bg-[hsl(var(--card))]/60 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">跟单记录</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {copyPositions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-[hsl(var(--muted-foreground))] text-sm">暂无跟单记录</p>
+                  </div>
+                ) : (
                   <div className="space-y-3">
-                    {positions.map((pos) => (
+                    {copyPositions.map((pos) => (
                       <div key={pos.id} className="p-4 bg-[hsl(var(--secondary))]/30 rounded-xl border border-[hsl(var(--border))]/30">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -188,9 +313,7 @@ export default function PortfolioPage() {
                               {pos.status === 'active' ? '活跃' : '暂停'}
                             </span>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => router.push('/trade')}>
-                            查看
-                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => router.push('/trade')}>查看</Button>
                         </div>
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
@@ -216,7 +339,7 @@ export default function PortfolioPage() {
             </Card>
           </div>
 
-          {/* Right: Actions */}
+          {/* Right sidebar */}
           <div className="space-y-4">
             {/* HL Binding */}
             <Card className={`bg-[hsl(var(--card))]/60 backdrop-blur-sm ${user?.hlAddress ? 'border-emerald-500/20' : 'border-cyan-500/20'}`}>
@@ -230,11 +353,9 @@ export default function PortfolioPage() {
                     <p className="text-xs font-mono text-[hsl(var(--muted-foreground))] mb-3">
                       {user.hlAddress.slice(0, 10)}...{user.hlAddress.slice(-6)}
                     </p>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => router.push('/dashboard/bind-hl')} className="text-xs">
-                        更换钱包
-                      </Button>
-                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => router.push('/dashboard/bind-hl')} className="text-xs">
+                      更换钱包
+                    </Button>
                   </div>
                 ) : (
                   <div>
@@ -278,16 +399,14 @@ export default function PortfolioPage() {
                 </div>
                 <div className="space-y-1.5 text-xs text-[hsl(var(--muted-foreground))]">
                   <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    钱包已连接
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> 钱包已连接
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className={`w-1.5 h-1.5 rounded-full ${user?.hlAddress ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
                     {user?.hlAddress ? 'HL 钱包已绑定' : 'HL 钱包未绑定'}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    AES-256 加密存储
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> AES-256 加密存储
                   </div>
                 </div>
               </CardContent>
